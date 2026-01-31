@@ -1,33 +1,21 @@
 """
 Main entry point for the Fading Light agent simulation.
 
-This script loads the configuration, initializes the agent (Elias), and starts
-an interactive CLI chat session where you can converse with the agent.
+This script loads the configuration and launches the SimulationEngine,
+which manages the multi-agent interaction loop.
 """
 
 import os
-import yaml
-import time
 from dotenv import load_dotenv
-from src.agent import SimulatedAgent
-
-def load_config():
-    """
-    Loads the agent configuration from the YAML file.
-
-    Returns:
-        dict: The parsed configuration dictionary.
-    """
-    with open("config/agents.yaml", "r") as f:
-        return yaml.safe_load(f)
+from src.engine import SimulationEngine
 
 def main():
     """
-    Main execution loop.
+    Main execution entry point.
     
-    1. Loads environment variables and config.
-    2. Initializes the agent 'Elias'.
-    3. Runs a REPL (Read-Eval-Print Loop) for user interaction.
+    1. Loads environment variables.
+    2. Initializes the SimulationEngine.
+    3. Starts the simulation.
     """
     # Load environment variables
     load_dotenv()
@@ -37,50 +25,12 @@ def main():
         print("ERROR: GOOGLE_API_KEY not found. Please create a .env file.")
         return
 
-    # Load Config
-    config = load_config()
-    
-    # Get global settings
-    settings = config.get("settings", {})
-    short_term_limit = settings.get("short_term_limit", 5)
-
-    # Pick the first agent (Elias)
-    agent_cfg = config["agents"][0]
-    print(f"Initializing Agent: {agent_cfg['name']} (Memory Limit: {short_term_limit})...")
-    
-    agent = SimulatedAgent(
-        agent_id=agent_cfg["id"],
-        name=agent_cfg["name"],
-        personality=agent_cfg["personality"],
-        short_term_limit=short_term_limit
-    )
-    
-    print(f"\n[{agent.name}] matches initialized. Start chatting! (Type 'exit' to quit)")
-    print("-" * 50)
-    
-    current_time = 0
-    
-    while True:
-        user_input = input("You: ")
-        if user_input.lower() in ["exit", "quit"]:
-            break
-            
-        # Simulate time passing
-        current_time += 1
-        
-        try:
-            # 1. Agent listens to the user (passive observation)
-            # We treat the CLI user as a named agent "Player" or "User"
-            agent.listen("User", user_input, current_time)
-            
-            # 2. Agent decides how to respond (active deliberation)
-            # In a real multi-agent sim, this step might be conditional.
-            # Here, we force a response to keep the chat interactive.
-            response = agent.respond(current_time)
-            
-            print(f"{agent.name}: {response}")
-        except Exception as e:
-            print(f"Error: {e}")
+    # Initialize and Start Engine
+    try:
+        engine = SimulationEngine()
+        engine.start()
+    except Exception as e:
+        print(f"CRITICAL ERROR: {e}")
 
 if __name__ == "__main__":
     main()

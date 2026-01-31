@@ -1,6 +1,10 @@
 settings:
   short_term_limit: 5
 
+scenario:
+  initial_message: "SYSTEM: You are gathered around a fading fire. The night is cold, and the wood is running low. You must decide who goes out to find more fuel."
+  max_rounds: 3
+
 agents:
   - id: "agent_01"
     name: "Elias"
