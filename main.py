@@ -69,7 +69,14 @@ def main():
         current_time += 1
         
         try:
-            response = agent.interact(user_input, current_time)
+            # 1. Agent listens to the user (passive observation)
+            agent.listen(user_input, current_time)
+            
+            # 2. Agent decides how to respond (active deliberation)
+            # In a real multi-agent sim, this step might be conditional.
+            # Here, we force a response to keep the chat interactive.
+            response = agent.respond(current_time)
+            
             print(f"{agent.name}: {response}")
         except Exception as e:
             print(f"Error: {e}")

@@ -17,13 +17,11 @@ class AgentState(TypedDict):
     Represents the state of the agent at any point in its execution graph.
 
     Attributes:
-        input_message (str): The current input message from the environment or another agent.
         current_time (int): The current simulation time tick.
         history_context (str): Retrieved short-term conversation history.
         semantic_context (List[str]): Retrieved relevant long-term memories.
         response (str): The generated response text.
     """
-    input_message: str
     current_time: int
     history_context: str
     semantic_context: List[str]
@@ -96,8 +94,8 @@ class SimulatedAgent:
         """
         Graph Node: Retrieves context from memory.
 
-        Fetches recent short-term history and queries long-term memory for
-        semantically relevant past interactions.
+        Fetches recent short-term history and queries long-term memory.
+        It uses the recent conversation history (up to short_term_limit) as the search query.
 
         Args:
             state (AgentState): The current state.
@@ -105,14 +103,17 @@ class SimulatedAgent:
         Returns:
             dict: Partial state update containing `history_context` and `semantic_context`.
         """
-        query = state["input_message"]
-        
         # Get Short term (recent chat)
         short_term = self.memory.get_short_term_context()
         
+        # Determine query for long-term memory
+        # We use the entire short-term history context as the trigger for semantic retrieval.
+        query = short_term
+        
         # Get Long term (semantic search)
-        # We search for memories relevant to the current input
-        long_term = self.memory.retrieve_relevant(query)
+        long_term = []
+        if query:
+            long_term = self.memory.retrieve_relevant(query)
         
         return {
             "history_context": short_term,
@@ -145,7 +146,7 @@ class SimulatedAgent:
         Core Instructions:
         1. Stay in character.
         2. Use the provided memory context to inform your response.
-        3. Respond naturally to the input.
+        3. Respond naturally to the conversation flow.
         """
         
         # Construct Context Block
@@ -156,7 +157,7 @@ class SimulatedAgent:
         if state["history_context"]:
             context_block += "\n\nRECENT CONVERSATION:\n" + state["history_context"]
             
-        user_input = f"{context_block}\n\nINPUT MESSAGE: {state['input_message']}"
+        user_input = f"{context_block}\n\nTASK: Generate a response to the recent conversation."
         
         # Call Gemini
         messages = [
@@ -171,17 +172,15 @@ class SimulatedAgent:
         """
         Graph Node: Saves the interaction to memory.
 
-        Stores both the user's input and the agent's response into the memory system.
+        Stores ONLY the agent's response into the memory system.
+        (Incoming messages are handled by `listen`).
 
         Args:
             state (AgentState): The current state.
 
         Returns:
-            AgentState: The state (passed through, though side effects occur in `self.memory`).
+            AgentState: The state.
         """
-        # Save the User's input
-        self.memory.add_interaction(f"User: {state['input_message']}", state['current_time'])
-        
         # Save the Agent's response
         self.memory.add_interaction(f"Me: {state['response']}", state['current_time'])
         
@@ -189,21 +188,30 @@ class SimulatedAgent:
 
     # --- Public API ---
 
-    def interact(self, message: str, current_time: int) -> str:
+    def listen(self, message: str, current_time: int):
         """
-        Main entry point for the simulation loop.
-
-        Injects a message into the agent's workflow and returns the response.
+        Passively observes a message from the environment/other agents.
+        
+        Adds the message to the agent's memory but does not trigger a response.
 
         Args:
-            message (str): The input message to the agent.
+            message (str): The content of the message.
+            current_time (int): The current simulation time tick.
+        """
+        self.memory.add_interaction(f"Others: {message}", current_time)
+
+    def respond(self, current_time: int) -> str:
+        """
+        Triggers the agent to deliberate and generate a response based on 
+        current memory state.
+
+        Args:
             current_time (int): The current simulation time tick.
 
         Returns:
             str: The agent's text response.
         """
         initial_state = {
-            "input_message": message,
             "current_time": current_time,
             "history_context": "",
             "semantic_context": [],
