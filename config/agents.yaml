@@ -1,3 +1,6 @@
+settings:
+  short_term_limit: 5
+
 agents:
   - id: "agent_01"
     name: "Elias"

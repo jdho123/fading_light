@@ -40,14 +40,19 @@ def main():
     # Load Config
     config = load_config()
     
+    # Get global settings
+    settings = config.get("settings", {})
+    short_term_limit = settings.get("short_term_limit", 5)
+
     # Pick the first agent (Elias)
     agent_cfg = config["agents"][0]
-    print(f"Initializing Agent: {agent_cfg['name']}...")
+    print(f"Initializing Agent: {agent_cfg['name']} (Memory Limit: {short_term_limit})...")
     
     agent = SimulatedAgent(
         agent_id=agent_cfg["id"],
         name=agent_cfg["name"],
-        personality=agent_cfg["personality"]
+        personality=agent_cfg["personality"],
+        short_term_limit=short_term_limit
     )
     
     print(f"\n[{agent.name}] matches initialized. Start chatting! (Type 'exit' to quit)")

@@ -37,7 +37,7 @@ class SimulatedAgent:
     by a state graph that handles context retrieval, response generation, and memory storage.
     """
 
-    def __init__(self, agent_id: str, name: str, personality: str):
+    def __init__(self, agent_id: str, name: str, personality: str, short_term_limit: int = 5):
         """
         Initialize the SimulatedAgent.
 
@@ -45,6 +45,7 @@ class SimulatedAgent:
             agent_id (str): A unique identifier for the agent.
             name (str): The display name of the agent.
             personality (str): A detailed description of the agent's personality and behavior.
+            short_term_limit (int, optional): The max number of recent messages to remember. Defaults to 5.
 
         Raises:
             ValueError: If `GOOGLE_API_KEY` is not set in the environment variables.
@@ -62,7 +63,7 @@ class SimulatedAgent:
         self.embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=api_key)
         
         # Initialize Memory
-        self.memory = AgentMemory(self.embeddings)
+        self.memory = AgentMemory(self.embeddings, short_term_limit=short_term_limit)
         
         # Initialize Graph
         self.graph = self._build_graph()
