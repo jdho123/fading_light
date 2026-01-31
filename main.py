@@ -70,7 +70,8 @@ def main():
         
         try:
             # 1. Agent listens to the user (passive observation)
-            agent.listen(user_input, current_time)
+            # We treat the CLI user as a named agent "Player" or "User"
+            agent.listen("User", user_input, current_time)
             
             # 2. Agent decides how to respond (active deliberation)
             # In a real multi-agent sim, this step might be conditional.

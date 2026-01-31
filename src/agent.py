@@ -188,17 +188,18 @@ class SimulatedAgent:
 
     # --- Public API ---
 
-    def listen(self, message: str, current_time: int):
+    def listen(self, sender: str, message: str, current_time: int):
         """
         Passively observes a message from the environment/other agents.
         
         Adds the message to the agent's memory but does not trigger a response.
 
         Args:
+            sender (str): The name/ID of the agent sending the message.
             message (str): The content of the message.
             current_time (int): The current simulation time tick.
         """
-        self.memory.add_interaction(f"Others: {message}", current_time)
+        self.memory.add_interaction(f"{sender}: {message}", current_time)
 
     def respond(self, current_time: int) -> str:
         """
