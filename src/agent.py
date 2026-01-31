@@ -7,10 +7,13 @@ manage the cognitive cycle of an agent: Recall -> Generate -> Memorize.
 
 from typing import TypedDict, List
 from langgraph.graph import StateGraph, END
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.output_parsers import StrOutputParser
 from src.memory import AgentMemory
 import os
+
 
 class AgentState(TypedDict):
     """
@@ -22,10 +25,12 @@ class AgentState(TypedDict):
         semantic_context (List[str]): Retrieved relevant long-term memories.
         response (str): The generated response text.
     """
+
     current_time: int
     history_context: str
     semantic_context: List[str]
     response: str
+
 
 class SimulatedAgent:
     """
@@ -35,7 +40,9 @@ class SimulatedAgent:
     by a state graph that handles context retrieval, response generation, and memory storage.
     """
 
-    def __init__(self, agent_id: str, name: str, personality: str, short_term_limit: int = 5):
+    def __init__(
+        self, agent_id: str, name: str, personality: str, short_term_limit: int = 5
+    ):
         """
         Initialize the SimulatedAgent.
 
@@ -51,18 +58,21 @@ class SimulatedAgent:
         self.agent_id = agent_id
         self.name = name
         self.personality = personality
-        
+
         # Initialize LLM and Embeddings
         api_key = os.getenv("GOOGLE_API_KEY")
         if not api_key:
             raise ValueError("GOOGLE_API_KEY not found in environment variables.")
-            
-        self.llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=api_key)
-        self.embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=api_key)
-        
+
+        self.llm = ChatGoogleGenerativeAI(
+            model="gemini-3-flash-preview", google_api_key=api_key
+        )
+        # Use local embeddings to avoid API quotas
+        self.embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+
         # Initialize Memory
         self.memory = AgentMemory(self.embeddings, short_term_limit=short_term_limit)
-        
+
         # Initialize Graph
         self.graph = self._build_graph()
 
@@ -89,7 +99,7 @@ class SimulatedAgent:
         return workflow.compile()
 
     # --- Nodes ---
-    
+
     def _node_recall(self, state: AgentState):
         """
         Graph Node: Retrieves context from memory.
@@ -105,20 +115,17 @@ class SimulatedAgent:
         """
         # Get Short term (recent chat)
         short_term = self.memory.get_short_term_context()
-        
+
         # Determine query for long-term memory
         # We use the entire short-term history context as the trigger for semantic retrieval.
         query = short_term
-        
+
         # Get Long term (semantic search)
         long_term = []
         if query:
             long_term = self.memory.retrieve_relevant(query)
-        
-        return {
-            "history_context": short_term,
-            "semantic_context": long_term
-        }
+
+        return {"history_context": short_term, "semantic_context": long_term}
 
     def _node_generate(self, state: AgentState):
         """
@@ -133,7 +140,7 @@ class SimulatedAgent:
         Returns:
             dict: Partial state update containing the generated `response`.
         """
-        
+
         # Construct the System Prompt
         system_prompt = f"""
         You are {self.name}. 
@@ -147,26 +154,34 @@ class SimulatedAgent:
         1. Stay in character.
         2. Use the provided memory context to inform your response.
         3. Respond naturally to the conversation flow.
+        4. Output ONLY the text of your response. Do not include JSON formatting or metadata.
         """
-        
+
         # Construct Context Block
         context_block = ""
         if state["semantic_context"]:
-            context_block += "\nRELEVANT PAST MEMORIES:\n" + "\n".join(state["semantic_context"])
-        
+            context_block += "\nRELEVANT PAST MEMORIES:\n" + "\n".join(
+                state["semantic_context"]
+            )
+
         if state["history_context"]:
             context_block += "\n\nRECENT CONVERSATION:\n" + state["history_context"]
-            
-        user_input = f"{context_block}\n\nTASK: Generate a response to the recent conversation."
-        
-        # Call Gemini
+
+        user_input = (
+            f"{context_block}\n\nTASK: Generate a response to the recent conversation."
+        )
+
+        # Call Gemini with Output Parser
         messages = [
             SystemMessage(content=system_prompt),
-            HumanMessage(content=user_input)
+            HumanMessage(content=user_input),
         ]
+
+        # Use chain with StrOutputParser
+        chain = self.llm | StrOutputParser()
+        response_text = chain.invoke(messages)
         
-        result = self.llm.invoke(messages)
-        return {"response": result.content}
+        return {"response": response_text}
 
     def _node_memorize(self, state: AgentState):
         """
@@ -182,8 +197,8 @@ class SimulatedAgent:
             AgentState: The state.
         """
         # Save the Agent's response
-        self.memory.add_interaction(f"Me: {state['response']}", state['current_time'])
-        
+        self.memory.add_interaction(f"Me: {state['response']}", state["current_time"])
+
         return state
 
     # --- Public API ---
@@ -191,7 +206,7 @@ class SimulatedAgent:
     def listen(self, sender: str, message: str, current_time: int):
         """
         Passively observes a message from the environment/other agents.
-        
+
         Adds the message to the agent's memory but does not trigger a response.
 
         Args:
@@ -203,7 +218,7 @@ class SimulatedAgent:
 
     def respond(self, current_time: int) -> str:
         """
-        Triggers the agent to deliberate and generate a response based on 
+        Triggers the agent to deliberate and generate a response based on
         current memory state.
 
         Args:
@@ -216,8 +231,8 @@ class SimulatedAgent:
             "current_time": current_time,
             "history_context": "",
             "semantic_context": [],
-            "response": ""
+            "response": "",
         }
-        
+
         final_state = self.graph.invoke(initial_state)
         return final_state["response"]

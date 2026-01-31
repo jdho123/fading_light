@@ -5,3 +5,5 @@ python-dotenv
 pydantic
 pyyaml
 numpy
+langchain-huggingface
+sentence-transformers

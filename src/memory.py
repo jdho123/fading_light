@@ -11,7 +11,7 @@ import numpy as np
 from collections import deque
 from dataclasses import dataclass
 from typing import List
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_core.embeddings import Embeddings
 
 @dataclass
 class MemoryItem:
@@ -37,12 +37,12 @@ class AgentMemory:
     the long-term memory allows retrieval of past events based on semantic relevance.
     """
 
-    def __init__(self, embedding_model: GoogleGenerativeAIEmbeddings, short_term_limit: int = 5):
+    def __init__(self, embedding_model: Embeddings, short_term_limit: int = 5):
         """
         Initialize the AgentMemory system.
 
         Args:
-            embedding_model (GoogleGenerativeAIEmbeddings): The model used to generate vector embeddings.
+            embedding_model (Embeddings): The model used to generate vector embeddings.
             short_term_limit (int, optional): The maximum number of recent messages to keep in short-term memory. Defaults to 5.
         """
         self.embedding_model = embedding_model
