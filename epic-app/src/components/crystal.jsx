@@ -101,12 +101,12 @@ const Crystal = ({ onSimulationStart }) => {
         />
       )}
 
-      <div className={`relative flex items-center justify-center transition-all duration-700 ease-in-out
+      <div className={`relative flex items-center justify-center transition-all duration-700 ease-in-out -translate-x-64
                        ${selectedPersonality ? 'pointer-events-none blur-sm brightness-50 scale-95' : 'opacity-100'}`}>
         
         {/* --- MODIFIED: Rotating Category Text --- */}
         {/* Now accepts isVisible={isCracked} to sync with animation */}
-        <PersonalityCategories radius={360} speed={64} isVisible={isCracked} />
+        <PersonalityCategories radius={280} speed={64} isVisible={isCracked} />
 
         {PERSONALITY_TYPES.map((type, index) => (
           <OrbitingCircle 
@@ -114,7 +114,7 @@ const Crystal = ({ onSimulationStart }) => {
             personality={type}
             icon={ICONS[type]} 
             isCracked={isCracked} 
-            radius={300} 
+            radius={240} 
             speed={64} 
             delay={index * 8}
             onOrbHover={() => handleOrbHover(type)}
