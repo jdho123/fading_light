@@ -23,21 +23,26 @@ const ConfigSlider = ({ label, value, min, max, onChange }) => (
 );
 
 /**
- * NEW: Helper component for boolean toggles
+ * Helper component for boolean toggles
  */
-const ConfigToggle = ({ label, value, onChange }) => (
+const ConfigToggle = ({ label, value, onChange, activeLabel = "ON", inactiveLabel = "OFF" }) => (
   <div className="w-full flex justify-between items-center mb-6 px-1 bg-white/5 p-3 rounded-lg border border-white/5">
     <span className="text-white/80 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
       {label}
     </span>
-    <button 
-      onClick={() => onChange(!value)}
-      className={`w-10 h-5 rounded-full relative transition-colors duration-300 focus:outline-none 
-                 ${value ? 'bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]' : 'bg-white/10'}`}
-    >
-      <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform duration-300 shadow-sm
-                      ${value ? 'translate-x-5' : 'translate-x-0'}`} />
-    </button>
+    <div className="flex items-center gap-3">
+      <span className={`text-[9px] font-bold tracking-wider transition-colors ${!value ? 'text-white/40' : 'text-cyan-400'}`}>
+        {value ? activeLabel : inactiveLabel}
+      </span>
+      <button 
+        onClick={() => onChange(!value)}
+        className={`w-10 h-5 rounded-full relative transition-colors duration-300 focus:outline-none 
+                   ${value ? 'bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]' : 'bg-white/10'}`}
+      >
+        <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform duration-300 shadow-sm
+                        ${value ? 'translate-x-5' : 'translate-x-0'}`} />
+      </button>
+    </div>
   </div>
 );
 
@@ -52,7 +57,8 @@ const PersonalityOverlay = ({ type, description, icon, onClose, onSimulationStar
 
   // Simulation parameters state
   const [config, setConfig] = useState({
-    textToSpeech: false, // NEW: Default OFF
+    useFakeData: true, // NEW: Default to FAKE (Client requirement)
+    textToSpeech: false,
     globalReplenish: 50,
     globalInit: 600,
     agentMax: 100,
@@ -72,12 +78,12 @@ const PersonalityOverlay = ({ type, description, icon, onClose, onSimulationStar
     setStartStatus("Connecting...");
 
     await personalityService.startSimulation((data) => {
-      // Once server is ready, we pass the full config (including TTS setting) to the app
+      // Once server is ready, we pass the full config (including TTS & FAKE/REAL setting) to the app
       if (data.sender === 'Server' && data.message === 'READY') {
         onSimulationStart({ 
           type, 
           icon, 
-          config, // This now contains { textToSpeech: false, ... }
+          config, 
           status: 'Establishing Protocol...' 
         });
         return;
@@ -193,7 +199,16 @@ const PersonalityOverlay = ({ type, description, icon, onClose, onSimulationStar
                     Simulation Parameters
                   </h3>
 
-                  {/* NEW: Text to Speech Toggle */}
+                  {/* DATA SOURCE TOGGLE (FAKE/REAL) */}
+                  <ConfigToggle 
+                    label="Data Source" 
+                    value={!config.useFakeData} // Visual logic: False=Fake(Off), True=Real(On) ? Or reverse. Let's make it explicit.
+                    onChange={(isReal) => handleConfigChange('useFakeData', !isReal)}
+                    activeLabel="REAL"
+                    inactiveLabel="FAKE"
+                  />
+
+                  {/* Text to Speech Toggle */}
                   <ConfigToggle 
                     label="Text to Speech" 
                     value={config.textToSpeech} 
