@@ -3,7 +3,7 @@ import LiquidGlass from './LiquidGlass';
 import { personalityService } from '../services/personalityService';
 
 /**
- * Helper component for the configuration sliders
+ * Helper component for configuration sliders
  */
 const ConfigSlider = ({ label, value, min, max, onChange }) => (
   <div className="w-full flex flex-col gap-2 mb-4">
@@ -22,6 +22,25 @@ const ConfigSlider = ({ label, value, min, max, onChange }) => (
   </div>
 );
 
+/**
+ * NEW: Helper component for boolean toggles
+ */
+const ConfigToggle = ({ label, value, onChange }) => (
+  <div className="w-full flex justify-between items-center mb-6 px-1 bg-white/5 p-3 rounded-lg border border-white/5">
+    <span className="text-white/80 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
+      {label}
+    </span>
+    <button 
+      onClick={() => onChange(!value)}
+      className={`w-10 h-5 rounded-full relative transition-colors duration-300 focus:outline-none 
+                 ${value ? 'bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]' : 'bg-white/10'}`}
+    >
+      <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform duration-300 shadow-sm
+                      ${value ? 'translate-x-5' : 'translate-x-0'}`} />
+    </button>
+  </div>
+);
+
 const PersonalityOverlay = ({ type, description, icon, onClose, onSimulationStart }) => {
   // UI States
   const [isExpanded, setIsExpanded] = useState(false);
@@ -33,6 +52,7 @@ const PersonalityOverlay = ({ type, description, icon, onClose, onSimulationStar
 
   // Simulation parameters state
   const [config, setConfig] = useState({
+    textToSpeech: false, // NEW: Default OFF
     globalReplenish: 50,
     globalInit: 600,
     agentMax: 100,
@@ -46,26 +66,22 @@ const PersonalityOverlay = ({ type, description, icon, onClose, onSimulationStar
 
   /**
    * Invokes the personality service and listens for the READY signal
-   * to transition the application view.
    */
   const handleStart = async () => {
     setIsStarting(true);
     setStartStatus("Connecting...");
 
-    // Connect to the dummy service
     await personalityService.startSimulation((data) => {
-      // Transition logic: Once the server acknowledges with READY, swap the view
+      // Once server is ready, we pass the full config (including TTS setting) to the app
       if (data.sender === 'Server' && data.message === 'READY') {
         onSimulationStart({ 
           type, 
           icon, 
-          config, 
+          config, // This now contains { textToSpeech: false, ... }
           status: 'Establishing Protocol...' 
         });
         return;
       }
-
-      // Subsequent messages (ENTJ, INTJ updates) are passed to the active simulation state
       onSimulationStart(data);
     });
   };
@@ -73,7 +89,7 @@ const PersonalityOverlay = ({ type, description, icon, onClose, onSimulationStar
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-500">
       
-      {/* Invisible Click Listener - Interaction locked during start sequence */}
+      {/* Invisible Click Listener */}
       <div 
         className="absolute inset-0 bg-transparent" 
         onClick={!isStarting ? onClose : undefined} 
@@ -86,7 +102,7 @@ const PersonalityOverlay = ({ type, description, icon, onClose, onSimulationStar
       >
         <div className="relative p-10 flex flex-col items-center">
             
-            {/* Settings Cog: Visible only after initial selection */}
+            {/* Settings Cog */}
             {isExpanded && !isStarting && (
               <button 
                 onClick={() => setShowSettings(!showSettings)}
@@ -176,7 +192,15 @@ const PersonalityOverlay = ({ type, description, icon, onClose, onSimulationStar
                     <span className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></span>
                     Simulation Parameters
                   </h3>
+
+                  {/* NEW: Text to Speech Toggle */}
+                  <ConfigToggle 
+                    label="Text to Speech" 
+                    value={config.textToSpeech} 
+                    onChange={(v) => handleConfigChange('textToSpeech', v)} 
+                  />
                   
+                  {/* Existing Sliders */}
                   <ConfigSlider label="Global Replenish" value={config.globalReplenish} min={0} max={100} onChange={(v) => handleConfigChange('globalReplenish', v)} />
                   <ConfigSlider label="Global Init" value={config.globalInit} min={200} max={1000} onChange={(v) => handleConfigChange('globalInit', v)} />
                   <ConfigSlider label="Agent Max" value={config.agentMax} min={50} max={100} onChange={(v) => handleConfigChange('agentMax', v)} />

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import './App.css'
 import Crystal from './components/crystal';
 import OrbitingCircle2 from './components/OrbitingCircle2';
@@ -34,51 +34,119 @@ const ICONS = {
   INFJ: infjIcon, INFP: infpIcon, ENFJ: enfjIcon, ENFP: enfpIcon,
   ISTJ: istjIcon, ISFJ: isfjIcon, ESTJ: estjIcon, ESFJ: esfjIcon,
   ISTP: istpIcon, ISFP: isfpIcon, ESTP: estpIcon, ESFP: esfpIcon,
-  ISTP: istpIcon, ISFP: isfpIcon, ESTP: estpIcon, ESFP: esfpIcon,
+};
+
+//
+const VOICE_ID_MAP = {
+  ENTJ: "upefjlNvhzs6Bcw8VH6r",
+  ENFJ: "E7Sex9zr9pSdBwMmCFf8",
+  ESFJ: "detYsvmHyJYEoGhsaCV2",
+  ESTJ: "C6wx0jKQZOfbhGCMLxln",
+  ENTP: "rvh70NPK87mkgsNu0qCU",
+  ENFP: "3zbDWL5dkaYKTYEwWAxL",
+  ESFP: "N81i2PTFujmPrv7rr7eq",
+  ESTP: "mbsOxFgNBAnyYulmKarO",
+  INTP: "iiXMKuEphYiFcjqxF9hT",
+  INFP: "TAoMcknZ76bE7VZNBnKp",
+  ISFP: "nBooZyQ3XaAtDHkVrfra",
+  ISTP: "lG0cGOrKcL9V4bXb7K9x",
+  INTJ: "8Sgmivd85TTZD6UAMwRh",
+  INFJ: "R09tipoJO7WzFgohIVar",
+  ISFJ: "HhIoigP8K3a4stK3JhCm",
+  ISTJ: "59yNuKbeZrPjixYWRBM9"
+};
+
+/**
+ * Helper to call the local TTS server and play audio.
+ * Returns a Promise that resolves ONLY when audio finishes playing.
+ */
+const playTTS = async (text, voiceId) => {
+  console.log(`🎤 [TTS] Requesting audio for: "${text}"`);
+  
+  try {
+    // 1. Fetch audio from local Python/Node server
+    const res = await fetch("http://127.0.0.1:8000/tts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, voice_id: voiceId })
+    });
+
+    if (!res.ok) {
+      console.error("❌ [TTS] Server Error:", res.status);
+      return; // Resolve immediately to unblock queue
+    }
+
+    // 2. Load Audio Blob
+    const blob = await res.blob();
+    const audioUrl = URL.createObjectURL(blob);
+    const audio = new Audio(audioUrl);
+
+    console.log("🔊 [TTS] Audio received, starting playback...");
+
+    // 3. Play and wait for 'ended' event
+    return new Promise((resolve) => {
+      audio.onended = () => {
+        console.log("✅ [TTS] Playback finished.");
+        URL.revokeObjectURL(audioUrl);
+        resolve(); // Only resolve when audio is actually done
+      };
+      
+      audio.onerror = (e) => {
+        console.warn("⚠️ [TTS] Playback error:", e);
+        resolve(); // Unblock queue if audio breaks
+      };
+
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((e) => {
+          console.warn("⚠️ [TTS] Autoplay blocked or failed:", e);
+          resolve(); // Unblock queue if browser blocks sound
+        });
+      }
+    });
+
+  } catch (err) {
+    console.error("❌ [TTS] Network Error (Is server running?):", err);
+    return Promise.resolve();
+  }
 };
 
 function App() {
-  // --- STATE MANAGEMENT ---
   const [activeSimulation, setActiveSimulation] = useState(null);
-  
-  // The Waiting Line: Stores messages that haven't been shown yet
   const [messageQueue, setMessageQueue] = useState([]);
-  
-  // The Stage: Stores the message currently being shown (or null if empty)
   const [displayedMessage, setDisplayedMessage] = useState(null);
 
   /**
    * INGESTION HANDLER
    */
   const handleDataUpdate = (data) => {
-    // If it's a message from a personality, add it to the waiting line.
-    if (data.message && data.sender !== 'Server') {
-      setMessageQueue(prev => [...prev, data]);
-    } else {
-      // Immediate update for system signals (e.g. READY, Status changes)
+    // Structural update (like READY or status change)
+    if (!data.message || data.sender === 'Server') {
       setActiveSimulation(prev => ({ ...prev, ...data }));
+    } 
+    // Queued message (Personalities talking)
+    else if (data.message) {
+      setMessageQueue(prev => [...prev, data]);
     }
   };
 
   /**
-   * EFFECT 1: QUEUE WATCHER
-   * If the stage is empty and there are people in line, move the first one to the stage.
+   * QUEUE WATCHER: Moves next item to stage if stage is empty
    */
   useEffect(() => {
     if (!displayedMessage && messageQueue.length > 0) {
       const nextData = messageQueue[0];
-      setDisplayedMessage(nextData);              // Move to stage
-      setMessageQueue(prev => prev.slice(1));     // Remove from line
+      setDisplayedMessage(nextData);
+      setMessageQueue(prev => prev.slice(1));
     }
   }, [messageQueue, displayedMessage]);
 
   /**
-   * EFFECT 2: STAGE MANAGER
-   * When someone steps on stage, update the UI, wait 3 seconds, then clear the stage.
+   * STAGE MANAGER: Handles Visual Timer + TTS Synchronization
    */
   useEffect(() => {
     if (displayedMessage) {
-      // 1. Update the Main Dashboard with the new actor
+      // Update the Dashboard UI
       setActiveSimulation(prev => ({
         ...prev,
         type: displayedMessage.type,
@@ -86,30 +154,57 @@ function App() {
         status: displayedMessage.status || prev?.status
       }));
 
-      // 2. Start the 3-second spotlight timer
-      const timer = setTimeout(() => {
-        setDisplayedMessage(null); // Clear stage (triggers Effect 1)
-      }, 3000);
+      let isCancelled = false;
 
-      // Cleanup: Only runs if component unmounts or displayedMessage changes
-      // (which doesn't happen until the timer finishes).
-      return () => clearTimeout(timer);
+      const runStageSequence = async () => {
+        const tasks = [];
+
+        // 1. Minimum Visual Duration (3 seconds)
+        // Even if audio is super short, we wait at least 3s.
+        tasks.push(new Promise(resolve => setTimeout(resolve, 3000)));
+
+        // 2. TTS Playback (if enabled)
+        // If audio is 5s long, this promise will take 5s, extending the wait.
+        if (activeSimulation?.config?.textToSpeech) {
+          const voiceId = VOICE_ID_MAP[displayedMessage.type];
+          if (voiceId) {
+            tasks.push(playTTS(displayedMessage.message, voiceId));
+          } else {
+            console.warn(`No voice ID mapped for type: ${displayedMessage.type}`);
+          }
+        }
+
+        // Wait for BOTH (whichever is longer)
+        await Promise.all(tasks);
+
+        // 3. Grace Period (1 second)
+        // Give the user a moment of silence after the voice ends before switching.
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        if (!isCancelled) {
+          setDisplayedMessage(null); // Clears stage -> Trigger Queue Watcher for next msg
+        }
+      };
+
+      runStageSequence();
+
+      return () => { isCancelled = true; };
     }
   }, [displayedMessage]);
 
   return (
     <main className="relative flex items-center justify-center min-h-screen bg-slate-950 overflow-hidden text-white">
-      {/* BACKGROUND GRID */}
+      {/* Background Grid */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)]"></div>
       
       {!activeSimulation ? (
-        /* --- MODE 1: SELECTION (Interactive Crystal) --- */
+        /* MODE 1: CRYSTAL SELECTION */
         <Crystal onSimulationStart={handleDataUpdate} />
       ) : (
-        /* --- MODE 2: DASHBOARD (Simulation View) --- */
+        /* MODE 2: DASHBOARD SIMULATION */
         <div className="relative w-full h-full flex animate-in fade-in duration-1000">
           
-          {/* LEFT COLUMN: ORBITING VISUALIZER */}
+          {/* LEFT: ORBIT VISUALIZER */}
           <div className="w-1/2 relative min-h-screen flex items-center justify-center border-r border-white/5">
              {PERSONALITY_TYPES.map((type, index) => (
                <OrbitingCircle2 
@@ -119,30 +214,25 @@ function App() {
                  index={index}
                  totalItems={PERSONALITY_TYPES.length}
                  speed={40} 
-                 isHighlighted={type === activeSimulation.type} // Dynamic Gold Highlight
+                 isHighlighted={type === activeSimulation.type} 
                />
              ))}
-             
-             {/* Central Atmospheric Glow */}
              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-yellow-500/5 blur-[120px] rounded-full"></div>
           </div>
           
-          {/* RIGHT COLUMN: DATA FEED & CONTROLS */}
+          {/* RIGHT: DATA FEED */}
           <div className="w-1/2 flex flex-col justify-center p-20 z-50">
-             {/* Status Indicator */}
              <div className="mb-2 text-yellow-500 font-mono tracking-[0.3em] uppercase text-xs font-bold animate-pulse">
                {activeSimulation.status || 'Simulation Active'}
              </div>
 
-             {/* Active Personality Title */}
              <h1 className="text-8xl font-bold tracking-tighter mb-8 transition-all duration-700">
                 {activeSimulation.type}
              </h1>
              
-             {/* Message Box with Progress Bar */}
              {activeSimulation.message && (
                <div 
-                 key={activeSimulation.message} // Forces re-render for animation reset
+                 key={activeSimulation.message} // Key forces re-animation on new message
                  className="p-8 bg-white/5 border border-white/10 rounded-3xl animate-in fade-in slide-in-from-bottom-4 duration-700 shadow-2xl"
                >
                   <p className="text-cyan-400 font-mono text-[10px] uppercase tracking-widest mb-4 opacity-50">
@@ -152,7 +242,7 @@ function App() {
                     "{activeSimulation.message}"
                   </p>
                   
-                  {/* The 3-second Progress Bar */}
+                  {/* Progress Bar (Visual only, fixed to 3s for style) */}
                   <div className="mt-8 h-1 w-full bg-white/5 rounded-full overflow-hidden">
                     <div 
                         className="h-full bg-cyan-500/50 animate-progress-fast" 
@@ -162,7 +252,6 @@ function App() {
                </div>
              )}
              
-             {/* Reset / Terminate Button */}
              <button 
                onClick={() => {
                  setActiveSimulation(null);
