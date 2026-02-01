@@ -93,174 +93,393 @@ const playTTS = async (text, voiceId) => {
 };
 
 function App() {
+
   const [activeSimulation, setActiveSimulation] = useState(null);
+
   const [messageQueue, setMessageQueue] = useState([]);
+
   const [displayedMessage, setDisplayedMessage] = useState(null);
+
   const [messageHistory, setMessageHistory] = useState([]);
+
   
-  // NEW: Controls the flow of the simulation rounds
+
   const [isRoundActive, setIsRoundActive] = useState(false);
-  
-  // NEW: Tracks if the server has finished sending data for the current round
+
   const [hasServerFinished, setHasServerFinished] = useState(false);
 
-  // NEW: Track the current round number
   const [roundCount, setRoundCount] = useState(1);
 
-  // NEW: Track if the simulation has reached its final conclusion
   const [isSimulationEnded, setIsSimulationEnded] = useState(false);
+
+
 
   const scrollRef = useRef(null);
 
-  /**
-   * INGESTION HANDLER
-   */
-  const handleDataUpdate = (data) => {
-    if (!data.message || data.sender === 'Server') {
-      setActiveSimulation(prev => ({ ...prev, ...data }));
-    } 
-    else if (data.message) {
-      setMessageQueue(prev => [...prev, data]);
-    }
-  };
+
 
   /**
-   * TRIGGER NEXT ROUND (Live API)
+
+   * INGESTION HANDLER
+
+   * - Structural data (no message) updates activeSimulation state.
+
+   * - Content data (message) is pushed to the queue for sequential display.
+
    */
+
+  const handleDataUpdate = (data) => {
+
+    console.log("📥 [APP] handleDataUpdate:", data);
+
+    if (!data.message || data.type === 'Server') {
+
+      setActiveSimulation(prev => ({ ...prev, ...data }));
+
+    } 
+
+    
+
+    if (data.message) {
+
+      setMessageQueue(prev => [...prev, data]);
+
+    }
+
+  };
+
+
+
+  /**
+
+   * TRIGGER NEXT ROUND (Live API)
+
+   */
+
   const handleNextRound = async () => {
-    console.log(`📡 [APP] Triggering Round ${roundCount}...`);
+
+    console.log(`📡 [APP] Triggering Round ${roundCount} via API...`);
+
     setIsRoundActive(true);
+
     setHasServerFinished(false); 
 
+
+
     try {
+
       const triggerRes = await fetch(`${API_BASE}/generate-turn`);
-      const triggerData = await triggerRes.json();
+
+      if (!triggerRes.ok) throw new Error(`HTTP Error: ${triggerRes.status}`);
+
       
+
+      const triggerData = await triggerRes.json();
+
+      console.log("🚀 [APP] Round Trigger Response:", triggerData);
+
+      
+
       if (triggerData.status === 'started' || triggerData.status === 'already_processing') {
-        const pollLoop = async () => {
-          try {
-            const pollRes = await fetch(`${API_BASE}/get-message`);
-            const msg = await pollRes.json();
 
-            if (msg.type === 'turn_over') {
-              console.log("🏁 [API] Round Complete signal received.");
-              setHasServerFinished(true); 
-              return; 
-            }
-            
-            if (msg.type === 'simulation_ended') {
-              console.log("🛑 [API] Simulation Ended signal received.");
-              setHasServerFinished(true);
-              setIsSimulationEnded(true);
-              return;
-            }
+        startPolling();
 
-            if (msg.type === 'text' || msg.type === 'system' || msg.type === 'round_start') {
-              const mbtiMatch = msg.sender.match(/\((.*?)\)/);
-              const mbtiType = mbtiMatch ? mbtiMatch[1] : msg.type;
-
-              handleDataUpdate({
-                type: msg.sender === 'SYSTEM' ? 'Server' : mbtiType,
-                message: msg.content,
-                status: msg.sender === 'SYSTEM' ? 'System Alert' : 'Incoming Transmission'
-              });
-            }
-
-            const delay = msg.type === 'none' ? 1000 : 200;
-            setTimeout(pollLoop, delay);
-
-          } catch (error) {
-            console.error("⚠️ [API] Polling error:", error);
-            setTimeout(pollLoop, 2000);
-          }
-        };
-
-        pollLoop();
       } else {
+
+        console.warn("⚠️ [APP] Unexpected trigger status:", triggerData.status);
+
         setIsRoundActive(false);
+
       }
+
     } catch (err) {
-      console.error("❌ [API] Network Error:", err);
+
+      console.error("❌ [APP] Failed to start round:", err);
+
       setIsRoundActive(false);
+
     }
+
   };
 
+
+
   /**
-   * AUTO-START FIRST ROUND
+
+   * POLLING ENGINE
+
    */
+
+  const startPolling = () => {
+
+    console.log("🔍 [APP] Starting Message Poller...");
+
+    
+
+    const pollLoop = async () => {
+
+      try {
+
+        const pollRes = await fetch(`${API_BASE}/get-message`);
+
+        if (!pollRes.ok) throw new Error(`Poll HTTP Error: ${pollRes.status}`);
+
+        
+
+        const msg = await pollRes.json();
+
+
+
+        // 1. End of Round
+
+        if (msg.type === 'turn_over') {
+
+          console.log("🏁 [APP] Received 'turn_over'. Stopping poll loop.");
+
+          setHasServerFinished(true); 
+
+          return; 
+
+        }
+
+        
+
+        // 2. End of Simulation
+
+        if (msg.type === 'simulation_ended') {
+
+          console.log("🛑 [APP] Received 'simulation_ended'. Stopping poll loop.");
+
+          setHasServerFinished(true);
+
+          setIsSimulationEnded(true);
+
+          return;
+
+        }
+
+
+
+        // 3. New Message Content
+
+        if (msg.type === 'text' || msg.type === 'system' || msg.type === 'round_start') {
+
+          console.log(`💬 [APP] New message from ${msg.sender}`);
+
+          const mbtiMatch = (msg.sender || "").match(/\((.*?)\)/);
+
+          const mbtiType = mbtiMatch ? mbtiMatch[1] : (msg.sender === 'SYSTEM' ? 'Server' : msg.type);
+
+
+
+          handleDataUpdate({
+
+            type: mbtiType,
+
+            message: msg.content,
+
+            status: msg.sender === 'SYSTEM' ? 'System Protocol' : 'Agent Transmission'
+
+          });
+
+          
+
+          // Poll again quickly for more messages
+
+          setTimeout(pollLoop, 200);
+
+        } 
+
+        // 4. No message yet
+
+        else {
+
+          // console.log("⏳ [APP] No message in queue...");
+
+          setTimeout(pollLoop, 1000);
+
+        }
+
+
+
+      } catch (error) {
+
+        console.error("⚠️ [APP] Polling error:", error);
+
+        setTimeout(pollLoop, 2000); // Retry after delay
+
+      }
+
+    };
+
+
+
+    pollLoop();
+
+  };
+
+
+
+  /**
+
+   * AUTO-START ON INITIALIZATION
+
+   */
+
   useEffect(() => {
+
     if (activeSimulation && roundCount === 1 && !isRoundActive && messageHistory.length === 0) {
-      console.log("🎬 [APP] Initializing Autonomous Simulation...");
+
+      console.log("🎬 [APP] Initial Trigger: Starting Round 1");
+
       handleNextRound();
+
     }
+
   }, [activeSimulation]);
 
+
+
   /**
-   * QUEUE WATCHER & AUTONOMOUS ROUND CHAINER
+
+   * SEQUENTIAL MESSAGE DISPLAY & ROUND CHAINING
+
    */
+
   useEffect(() => {
-    // Detect End of Round Presentation:
+
+    // A. Detect End of Presentation:
+
     if (isRoundActive && hasServerFinished && messageQueue.length === 0 && !displayedMessage) {
+
       if (isSimulationEnded) {
-        console.log("🎬 [APP] Simulation Complete. Returning to Standby.");
+
+        console.log("🏁 [APP] Simulation Complete.");
+
         setIsRoundActive(false);
+
       } else {
-        console.log("🎬 [APP] Round Complete. Preparing next round...");
-        // Short pause to let the user process the round end
+
+        console.log(`📦 [APP] Round ${roundCount} finished. Auto-queueing next round...`);
+
         setTimeout(() => {
+
            setRoundCount(prev => prev + 1);
+
            handleNextRound();
-        }, 2000);
+
+        }, 2500);
+
       }
+
       setHasServerFinished(false);
+
       return;
+
     }
+
+
+
+    // B. Pick Next Message from Queue:
 
     if (isRoundActive && !displayedMessage && messageQueue.length > 0) {
+
       const nextData = messageQueue[0];
+
+      console.log("📺 [APP] Displaying message:", nextData.type);
+
       setDisplayedMessage(nextData);
+
       setMessageQueue(prev => prev.slice(1));
+
     }
+
   }, [messageQueue, displayedMessage, isRoundActive, hasServerFinished, isSimulationEnded]);
 
+
+
   /**
-   * STAGE MANAGER
+
+   * DISPLAY TIMER & TTS
+
    */
+
   useEffect(() => {
+
     if (displayedMessage) {
+
+      // Sync active view with the displayed message
+
       setActiveSimulation(prev => ({
+
         ...prev,
+
         type: displayedMessage.type,
+
         message: displayedMessage.message,
+
         status: displayedMessage.status || prev?.status
+
       }));
+
+
 
       setMessageHistory(prev => [...prev, displayedMessage]);
 
+
+
       let isCancelled = false;
 
-      const runStageSequence = async () => {
-        const tasks = [];
-        tasks.push(new Promise(resolve => setTimeout(resolve, 3000)));
+
+
+      const runDisplaySequence = async () => {
+
+        // Minimum time to read (based on text length or fixed)
+
+        const readingTime = Math.max(3000, displayedMessage.message.length * 50);
+
+        const tasks = [new Promise(resolve => setTimeout(resolve, readingTime))];
+
+
+
+        // Optional Audio
 
         if (activeSimulation?.config?.textToSpeech) {
+
           const voiceId = VOICE_ID_MAP[displayedMessage.type];
+
           if (voiceId) {
+
             tasks.push(playTTS(displayedMessage.message, voiceId));
+
           }
+
         }
+
+
 
         await Promise.all(tasks);
-        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        await new Promise(resolve => setTimeout(resolve, 500)); // Grace period
+
+
 
         if (!isCancelled) {
+
           setDisplayedMessage(null); 
+
         }
+
       };
 
-      runStageSequence();
+
+
+      runDisplaySequence();
+
       return () => { isCancelled = true; };
+
     }
+
   }, [displayedMessage]);
 
   // Auto-scroll chat
