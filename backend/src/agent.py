@@ -8,6 +8,7 @@ from langchain_core.tools import tool
 from src.memory import AgentMemory
 import os
 
+
 @tool
 def take_essence(amount: int):
     """
@@ -15,6 +16,7 @@ def take_essence(amount: int):
     Call this tool when you have decided to ACT.
     """
     return amount
+
 
 class AgentState(TypedDict):
     """
@@ -76,9 +78,7 @@ class SimulatedAgent:
         if not api_key:
             raise ValueError("ANTHROPIC_API_KEY not found in environment variables.")
 
-        self.llm = ChatAnthropic(
-            model="claude-3-5-sonnet-latest", api_key=api_key
-        )
+        self.llm = ChatAnthropic(model="claude-sonnet-4-5-20250929", api_key=api_key)
         self.llm_with_tools = self.llm.bind_tools([take_essence])
 
         # Use local embeddings to avoid API quotas
@@ -111,7 +111,7 @@ class SimulatedAgent:
         workflow.add_edge("memorize", END)
 
         return workflow.compile()
-    
+
     def _get_emotional_state(self, current: int) -> str:
         """Determines emotional state based on personal essence level."""
         if current >= 80:
@@ -163,8 +163,8 @@ class SimulatedAgent:
         Returns:
             dict: Partial state update containing the generated `response`.
         """
-        
-        emotional_state = self._get_emotional_state(state['personal_essence'])
+
+        emotional_state = self._get_emotional_state(state["personal_essence"])
 
         # Construct the System Prompt
         system_prompt = f"""
@@ -191,7 +191,9 @@ class SimulatedAgent:
         1. Stay in character.
         2. Use the provided memory context to inform your response.
         3. Respond naturally to the conversation flow.
-        4. **DECISION PHASE:**
+        4. Respond concisely (1-2 short statements max) as a person would speak, in a single unformatted string.
+        5. Just output speech, do not describe action or thoughts.
+        5. **DECISION PHASE:**
            - If you wish to discuss, output text ONLY.
            - If you wish to ACT and secure essence, call the `take_essence` tool.
            - Do NOT do both (e.g. do not output text and then call the tool).
@@ -209,9 +211,7 @@ class SimulatedAgent:
         if state["history_context"]:
             context_block += "\n\nRECENT CONVERSATION:\n" + state["history_context"]
 
-        user_input = (
-            f"{context_block}\n\nTASK: Generate a response to the recent conversation. Decide if you will speak or ACT now."
-        )
+        user_input = f"{context_block}\n\nTASK: Generate a response to the recent conversation. Decide if you will speak or ACT now."
 
         # Call Claude with Output Parser
         messages = [
@@ -221,21 +221,21 @@ class SimulatedAgent:
 
         # Invoke LLM with tools (returns AIMessage)
         response_msg = self.llm_with_tools.invoke(messages)
-        
+
         return {"response": response_msg}
 
     def _node_memorize(self, state: AgentState):
         """
         Graph Node: Saves the interaction to memory.
         """
-        msg = state['response']
-        
+        msg = state["response"]
+
         # Determine what to save based on whether it was text or tool
         content_to_save = ""
         if msg.tool_calls:
             # It was an action
-            args = msg.tool_calls[0]['args']
-            amount = args.get('amount', 0)
+            args = msg.tool_calls[0]["args"]
+            amount = args.get("amount", 0)
             content_to_save = f"Me: [ACTION] I decided to take {amount} essence."
         else:
             # It was dialogue
@@ -260,7 +260,9 @@ class SimulatedAgent:
         """
         self.memory.add_interaction(f"{sender}: {message}", current_time)
 
-    def respond(self, current_time: int, global_essence: int, personal_essence: int) -> Any:
+    def respond(
+        self, current_time: int, global_essence: int, personal_essence: int
+    ) -> Any:
         """
         Triggers the agent to deliberate and generate a response based on
         current memory state.
@@ -279,7 +281,7 @@ class SimulatedAgent:
             "semantic_context": [],
             "response": None,
             "global_essence": global_essence,
-            "personal_essence": personal_essence
+            "personal_essence": personal_essence,
         }
 
         final_state = self.graph.invoke(initial_state)
