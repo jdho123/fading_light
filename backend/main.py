@@ -50,15 +50,19 @@ async def generate_turn(background_tasks: BackgroundTasks):
     Triggers the engine to process an entire round in the background.
     Automatically initializes with all agents if not already running.
     """
+    print(f"\n[API] 📥 Received /generate-turn request. Engine Running: {engine.is_running}")
     if not engine.is_running:
         if not os.getenv("ANTHROPIC_API_KEY"):
+            print("[API] ❌ ANTHROPIC_API_KEY is missing!")
             raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY not set on server.")
         engine.initialize_simulation()
     
     if engine.is_generating:
+        print("[API] ⚠️ Round is already being generated. Skipping.")
         return {"status": "already_processing", "message": "A round is already being generated."}
     
     # Run the round in the background
+    print("[API] 🚀 Dispatching round generation to background worker.")
     background_tasks.add_task(engine.run_round_background)
     
     return {"status": "started", "message": "Round generation started in background."}
@@ -67,11 +71,6 @@ async def generate_turn(background_tasks: BackgroundTasks):
 async def get_message():
     """
     Polls for the next available message or status update.
-    Returns:
-    - { "type": "text", "sender": "...", "content": "..." }
-    - { "type": "turn_over" }
-    - { "type": "simulation_ended" }
-    - { "type": "none" }
     """
     msg = engine.get_next_message()
     if msg:

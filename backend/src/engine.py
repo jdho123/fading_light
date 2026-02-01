@@ -93,13 +93,14 @@ class SimulationEngine:
 
     def initialize_simulation(self):
         """Initializes all agents defined in the config file and resets state."""
-        print("Initializing Simulation with all configured agents...")
+        print("\n[ENGINE] 🛠️ Initializing Simulation with all configured agents...")
         self.reset_to_defaults()
         
         scenario_text = self.scenario.get("initial_message", "Simulation Start.")
         initial_agent_res = self.res_config.get("agent_initial", 70)
         
         for agent_cfg in self.config["agents"]:
+            print(f"[ENGINE]   -> Loading Agent: {agent_cfg['name']} ({agent_cfg['id']})")
             agent = SimulatedAgent(
                 agent_id=agent_cfg["id"],
                 name=agent_cfg["name"],
@@ -113,16 +114,15 @@ class SimulationEngine:
         self.is_running = True
         self.round_num = 0
         self._push_message("SYSTEM", f"Simulation initialized with {len(self.agents)} agents.")
+        print("[ENGINE] ✅ Initialization Complete.\n")
 
     def select_agents(self, agent_ids: List[str]):
         """Legacy method or specific subset selection."""
-        # For now, we'll just redirect to initialize_simulation if we want everything
-        # or keep it as is if specific selection is still needed.
-        # But per user request, we are moving to config-driven.
         self.initialize_simulation()
 
     def _push_message(self, sender: str, content: str, msg_type: str = "text"):
         """Internal helper to queue messages for polling."""
+        print(f"[ENGINE] 📥 Queuing Message from {sender}: \"{content[:50]}...\"")
         self.message_queue.append({
             "sender": sender,
             "content": content,
@@ -140,12 +140,14 @@ class SimulationEngine:
     def get_next_message(self) -> Optional[Dict]:
         """Returns the oldest message in the queue (FIFO)."""
         if self.message_queue:
-            return self.message_queue.pop(0)
+            msg = self.message_queue.pop(0)
+            print(f"[ENGINE] 📤 Polled Message from {msg['sender']}")
+            return msg
         
         # If no messages but round is over, return special signal
         if self.is_running and self.round_num > 0 and not self.pending_agents and not self.message_queue:
-            # We check if we are actually at the end of the simulation too
             if self.round_num >= self.max_rounds:
+                print("[ENGINE] 🏁 Simulation reached max rounds.")
                 return {"type": "simulation_ended"}
             return {"type": "turn_over"}
             
@@ -157,6 +159,7 @@ class SimulationEngine:
         self.turns_in_round = 0
         self.agents_done = set()
         
+        print(f"\n[ENGINE] 🌀 Starting Round {self.round_num}")
         self._push_message("SYSTEM", f"--- Starting Round {self.round_num} ---", "round_start")
         
         # 1. Replenish
@@ -173,11 +176,13 @@ class SimulationEngine:
                 self.agent_resources[aid] -= decay
                 if self.agent_resources[aid] <= 0:
                     self.agent_resources[aid] = 0
+                    print(f"[ENGINE] 💀 {agent.name} has faded away.")
                     self.broadcast("SYSTEM", f"{agent.name} has faded away.")
                 else:
                     active_agents.append(agent)
 
         if not active_agents:
+            print("[ENGINE] ❌ All agents are dead. Ending simulation.")
             self._push_message("SYSTEM", "All agents have faded. Simulation Over.", "simulation_ended")
             self.is_running = False
             return
@@ -185,6 +190,7 @@ class SimulationEngine:
         # 3. Shuffle queue
         random.shuffle(active_agents)
         self.pending_agents = active_agents
+        print(f"[ENGINE] Round {self.round_num} order: {[a.name for a in self.pending_agents]}")
 
     def generate_round(self) -> Dict:
         """
@@ -192,6 +198,7 @@ class SimulationEngine:
         If the round hasn't started, it initializes it.
         Then it loops until all agents have acted or the turn limit is reached.
         """
+        print(f"[ENGINE] ⚡ Generating Round {self.round_num + 1}...")
         if not self.is_running:
             return {"error": "Simulation not initialized or has ended."}
 
@@ -202,12 +209,11 @@ class SimulationEngine:
             self.start_new_round()
 
         # 2. Process turns until the round is complete
-        # A round is complete when pending_agents is empty 
-        # (either because they all acted or the turn limit hit)
         start_round = self.round_num
         while self.pending_agents and self.round_num == start_round:
             self._step_once()
             
+        print(f"[ENGINE] ✅ Round {start_round} generation complete.")
         return {
             "status": "round_completed",
             "round": self.round_num
@@ -219,6 +225,7 @@ class SimulationEngine:
             return
 
         agent = self.pending_agents.pop(0)
+        print(f"[ENGINE] 🎤 It is {agent.name}'s turn (Turn {self.turns_in_round + 1}).")
         
         self.current_time += 1
         self.turns_in_round += 1
@@ -234,20 +241,19 @@ class SimulationEngine:
         action_taken = self._process_take_action(agent, response_msg)
         
         if action_taken:
+            print(f"[ENGINE]   -> {agent.name} took an action. Turn complete.")
             self.agents_done.add(agent.agent_id)
         else:
-            # If no action, it was dialogue. 
-            # Dialogue agents remain in the pending list for next cycles until they act.
-            # We put them at the end of the queue.
+            print(f"[ENGINE]   -> {agent.name} spoke. Returning to queue.")
             content = response_msg.content
             if content:
                 self.broadcast(agent.name, content)
             self.pending_agents.append(agent)
 
-        # Check for discussion turn limit
         if self.turns_in_round >= self.max_discussion_turns:
+            print("[ENGINE] ⚠️ Max discussion turns reached for this round.")
             self._push_message("SYSTEM", "Discussion limit reached. Round ending.")
-            self.pending_agents = [] # Clear queue to force end of round
+            self.pending_agents = []
 
     def _process_take_action(self, agent: SimulatedAgent, response_message) -> bool:
         """Inspects for tool calls and updates state."""
