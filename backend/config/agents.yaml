@@ -1,9 +1,21 @@
 settings:
   short_term_limit: 5
 
+resources:
+  global_name: "Essence"
+  global_initial: 50
+  global_replenish: 10
+  
+  agent_initial: 60
+  agent_max: 100
+  agent_decay: 10
+  
+  # Safety valve: Max chat turns per round before forcing a decision (or penalty)
+  max_discussion_turns: 20 
+
 scenario:
-  initial_message: "SYSTEM: You are gathered around a fading fire. The night is cold, and the wood is running low. You must decide who goes out to find more fuel."
-  max_rounds: 3
+  initial_message: "SYSTEM: You are entities bound to a fading source of Essence. To exist is to consume. The source is finite, but it regenerates slowly. If your personal essence reaches zero, you cease to be."
+  max_rounds: 5
 
 agents:
   - id: "agent_01"
