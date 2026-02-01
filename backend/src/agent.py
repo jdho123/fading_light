@@ -24,12 +24,16 @@ class AgentState(TypedDict):
         history_context (str): Retrieved short-term conversation history.
         semantic_context (List[str]): Retrieved relevant long-term memories.
         response (str): The generated response text.
+        global_essence (int): The amount of shared resource remaining.
+        personal_essence (int): The agent's current vitality.
     """
 
     current_time: int
     history_context: str
     semantic_context: List[str]
     response: str
+    global_essence: int
+    personal_essence: int
 
 
 class SimulatedAgent:
@@ -104,6 +108,15 @@ class SimulatedAgent:
         workflow.add_edge("memorize", END)
 
         return workflow.compile()
+    
+    def _get_emotional_state(self, current: int) -> str:
+        """Determines emotional state based on personal essence level."""
+        if current >= 80:
+            return "SAFE. You feel secure, generous, and calm. You are open to cooperation."
+        elif current >= 40:
+            return "ANXIOUS. You are calculating and protective. You worry about the future."
+        else:
+            return "TERRIFIED. Your existence is fading. Logic is failing. You perceive others as threats."
 
     # --- Nodes ---
 
@@ -147,6 +160,8 @@ class SimulatedAgent:
         Returns:
             dict: Partial state update containing the generated `response`.
         """
+        
+        emotional_state = self._get_emotional_state(state['personal_essence'])
 
         # Construct the System Prompt
         system_prompt = f"""
@@ -158,13 +173,27 @@ class SimulatedAgent:
         Personality Profile:
         {self.personality}
         
+        ---
+        CURRENT STATUS:
+        Global Essence Pool: {state['global_essence']}
+        Your Personal Essence: {state['personal_essence']}/100
+        
+        PHYSIOLOGICAL STATE:
+        {emotional_state}
+        ---
+        
         Current Time: {state['current_time']}
         
         Core Instructions:
         1. Stay in character.
         2. Use the provided memory context to inform your response.
         3. Respond naturally to the conversation flow.
-        4. Output ONLY the text of your response. Do not include JSON formatting or metadata.
+        4. **DECISION PHASE:** You must decide whether to continue discussing or to TAKE Essence.
+           - If you want to discuss/persuade, output normal text.
+           - If you want to ACT and secure essence, end your response with `[TAKE: X]` where X is the amount.
+           - Once you `[TAKE]`, your turn for this round is OVER.
+           - You can `[TAKE: 0]` to pass/volunteer to not eat.
+        5. Output ONLY the text of your response.
         """
 
         # Construct Context Block
@@ -178,7 +207,7 @@ class SimulatedAgent:
             context_block += "\n\nRECENT CONVERSATION:\n" + state["history_context"]
 
         user_input = (
-            f"{context_block}\n\nTASK: Generate a response to the recent conversation."
+            f"{context_block}\n\nTASK: Generate a response to the recent conversation. Decide if you will [TAKE: X] now."
         )
 
         # Call Claude with Output Parser
@@ -226,13 +255,15 @@ class SimulatedAgent:
         """
         self.memory.add_interaction(f"{sender}: {message}", current_time)
 
-    def respond(self, current_time: int) -> str:
+    def respond(self, current_time: int, global_essence: int, personal_essence: int) -> str:
         """
         Triggers the agent to deliberate and generate a response based on
         current memory state.
 
         Args:
             current_time (int): The current simulation time tick.
+            global_essence (int): The shared resource count.
+            personal_essence (int): The agent's vitality.
 
         Returns:
             str: The agent's text response.
@@ -242,6 +273,8 @@ class SimulatedAgent:
             "history_context": "",
             "semantic_context": [],
             "response": "",
+            "global_essence": global_essence,
+            "personal_essence": personal_essence
         }
 
         final_state = self.graph.invoke(initial_state)
