@@ -1,28 +1,38 @@
-import React, { useState, useRef } from 'react';
-import OrbitingCircle from './OrbitingCircle';
-import PersonalityCategories from './PersonalityCategories';
-import { personalityService } from '../services/personalityService';
+import React, { useState, useRef } from "react";
+import OrbitingCircle from "./OrbitingCircle";
+import PersonalityCategories from "./PersonalityCategories";
+import { personalityService } from "../services/personalityService";
 
-import intjIcon from '../assets/icons/INTJ.svg';
+import intjIcon from "../assets/icons/INTJ.svg";
 // ... (rest of icon imports kept for now to avoid breaking constants)
-import intpIcon from '../assets/icons/INTP.svg';
-import infjIcon from '../assets/icons/INFJ.svg';
-import infpIcon from '../assets/icons/INFP.svg';
-import istjIcon from '../assets/icons/ISTJ.svg';
-import isfjIcon from '../assets/icons/ISFJ.svg';
-import istpIcon from '../assets/icons/ISTP.svg';
-import isfpIcon from '../assets/icons/ISFP.svg';
+import intpIcon from "../assets/icons/INTP.svg";
+import infjIcon from "../assets/icons/INFJ.svg";
+import infpIcon from "../assets/icons/INFP.svg";
+import istjIcon from "../assets/icons/ISTJ.svg";
+import isfjIcon from "../assets/icons/ISFJ.svg";
+import istpIcon from "../assets/icons/ISTP.svg";
+import isfpIcon from "../assets/icons/ISFP.svg";
 
 const PERSONALITY_TYPES = [
-  'INTJ', 'INTP', 'INFJ', 'INFP',
-  'ISTJ', 'ISFJ', 'ISTP', 'ISFP'
+  "INTJ",
+  "INTP",
+  "INFJ",
+  "INFP",
+  "ISTJ",
+  "ISFJ",
+  "ISTP",
+  "ISFP",
 ];
 
 const ICONS = {
-  INTJ: intjIcon, INTP: intpIcon,
-  INFJ: infjIcon, INFP: infpIcon,
-  ISTJ: istjIcon, ISFJ: isfjIcon,
-  ISTP: istpIcon, ISFP: isfpIcon,
+  INTJ: intjIcon,
+  INTP: intpIcon,
+  INFJ: infjIcon,
+  INFP: infpIcon,
+  ISTJ: istjIcon,
+  ISFJ: isfjIcon,
+  ISTP: istpIcon,
+  ISFP: isfpIcon,
 };
 
 const PERSONALITY_DESCRIPTIONS = {
@@ -39,11 +49,11 @@ const PERSONALITY_DESCRIPTIONS = {
 const Crystal = ({ onSimulationStart }) => {
   const [shockwaves, setShockwaves] = useState([]);
   const [isCracked, setIsCracked] = useState(false);
-  
+
   const [hoveredOrbId, setHoveredOrbId] = useState(null);
   const [isInteractionLocked, setIsInteractionLocked] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
-  
+
   const leaveTimeoutRef = useRef(null);
   const lastShockwaveTimeRef = useRef(0);
 
@@ -51,7 +61,7 @@ const Crystal = ({ onSimulationStart }) => {
     const now = Date.now();
     if (now - lastShockwaveTimeRef.current < 500) return;
     lastShockwaveTimeRef.current = now;
-    
+
     const id = now;
     setShockwaves((prev) => [...prev, id]);
     setTimeout(() => {
@@ -65,22 +75,22 @@ const Crystal = ({ onSimulationStart }) => {
     setIsInteractionLocked(true);
 
     const defaultConfig = {
-        useFakeData: true,
-        textToSpeech: false,
-        globalReplenish: 50,
-        globalInit: 600,
-        agentMax: 100,
-        agentInit: 100,
-        agentDecay: 10
+      useFakeData: true,
+      textToSpeech: false,
+      globalReplenish: 50,
+      globalInit: 600,
+      agentMax: 100,
+      agentInit: 100,
+      agentDecay: 10,
     };
 
     await personalityService.startSimulation((data) => {
-      if (data.sender === 'Server' && data.message === 'READY') {
-        onSimulationStart({ 
-          type: 'SYSTEM', 
-          icon: null, 
-          config: defaultConfig, 
-          status: 'Establishing Protocol...' 
+      if (data.sender === "Server" && data.message === "READY") {
+        onSimulationStart({
+          type: "SYSTEM",
+          icon: null,
+          config: defaultConfig,
+          status: "Establishing Protocol...",
         });
         return;
       }
@@ -89,15 +99,20 @@ const Crystal = ({ onSimulationStart }) => {
   };
 
   const handleCrackToggle = () => {
-    if (isInteractionLocked) return;
+    if (isInteractionLocked || isStarting) return;
 
-    if (!isCracked) {
-      setIsInteractionLocked(true);
-      setTimeout(() => setIsInteractionLocked(false), 300);
-      setIsCracked(true);
-    } else {
-      handleStart();
-    }
+    // Trigger visual state
+    setIsCracked(true);
+    
+    // Immediate callback to App to switch view/show chat
+    onSimulationStart({
+      type: "SYSTEM",
+      status: "Initializing...",
+      config: { useFakeData: true }
+    });
+
+    // Proceed with service initialization
+    handleStart();
   };
 
   const handleOrbHover = (id) => {
@@ -117,22 +132,22 @@ const Crystal = ({ onSimulationStart }) => {
 
   return (
     <>
-      <div className={`relative flex items-center justify-center transition-all duration-1000 ease-in-out
-                       ${isCracked ? '-translate-x-64' : 'translate-x-0'}
-                       ${isStarting ? 'pointer-events-none blur-sm brightness-50 scale-95' : 'opacity-100'}`}>
-        
+      <div
+        className={`relative flex items-center justify-center transition-all duration-1000 ease-in-out
+                       ${isStarting ? "pointer-events-none blur-sm brightness-50 scale-95" : "opacity-100"}`}
+      >
         {/* --- MODIFIED: Rotating Category Text --- */}
         {/* Now accepts isVisible={isCracked} to sync with animation */}
         <PersonalityCategories radius={280} speed={64} isVisible={isCracked} />
 
         {PERSONALITY_TYPES.map((type, index) => (
-          <OrbitingCircle 
-            key={type} 
+          <OrbitingCircle
+            key={type}
             personality={type}
-            icon={ICONS[type]} 
-            isCracked={isCracked} 
-            radius={240} 
-            speed={64} 
+            icon={ICONS[type]}
+            isCracked={isCracked}
+            radius={240}
+            speed={64}
             delay={index * 8}
             onOrbHover={() => handleOrbHover(type)}
             onOrbLeave={handleOrbLeave}
@@ -152,42 +167,46 @@ const Crystal = ({ onSimulationStart }) => {
         ))}
 
         <div className="group relative cursor-pointer select-none">
-          <div 
-              onMouseEnter={triggerShockwave}
-              onClick={handleCrackToggle}
-              className="relative"
+          <div
+            onMouseEnter={triggerShockwave}
+            onClick={handleCrackToggle}
+            className="relative"
           >
-              <div className={`absolute inset-0 bg-red-600 blur-3xl opacity-40 animate-pulse transition-all duration-700 
-                              group-hover:bg-cyan-500 group-hover:opacity-60 ${isCracked ? 'opacity-20 scale-150' : ''}`}></div>
-              <div className="absolute inset-0 bg-red-500 blur-2xl opacity-30 animate-ping transition-all duration-1000 group-hover:opacity-0"></div>
-              <div className="relative w-24 h-40 animate-float transition-transform duration-500">
-                  <div 
-                      className={`absolute inset-0 bg-gradient-to-b from-red-400 via-red-600 to-red-900 
+            <div
+              className={`absolute inset-0 bg-red-600 blur-3xl opacity-40 animate-pulse transition-all duration-700 
+                              group-hover:bg-cyan-500 group-hover:opacity-60 ${isCracked ? "opacity-20 scale-150" : ""}`}
+            ></div>
+            <div className="absolute inset-0 bg-red-500 blur-2xl opacity-30 animate-ping transition-all duration-1000 group-hover:opacity-0"></div>
+            <div className="relative w-24 h-40 animate-float transition-transform duration-500">
+              <div
+                className={`absolute inset-0 bg-gradient-to-b from-red-400 via-red-600 to-red-900 
                               transition-all duration-500 ease-out
                               group-hover:from-cyan-300 group-hover:via-cyan-500 group-hover:to-blue-900
-                              ${isCracked ? '-translate-x-4 -rotate-6 opacity-80' : ''}`}
-                      style={{ clipPath: "polygon(0% 50%, 50% 0%, 50% 100%)" }}
-                  >
-                      <div className="absolute inset-0 bg-white/20 w-full h-full skew-x-12 transform-gpu"></div>
-                  </div>
-                  <div 
-                      className={`absolute inset-0 bg-gradient-to-b from-red-400 via-red-600 to-red-900 
-                              transition-all duration-500 ease-out
-                              group-hover:from-cyan-300 group-hover:via-cyan-500 group-hover:to-blue-900
-                              ${isCracked ? 'translate-x-4 rotate-6 opacity-80' : ''}`}
-                      style={{ clipPath: "polygon(50% 0%, 100% 50%, 50% 100%)" }}
-                  >
-                      <div className="absolute inset-0 bg-white/10 w-full h-full -skew-x-12 transform-gpu"></div>
-                  </div>
+                              ${isCracked ? "-translate-x-4 -rotate-6 opacity-80" : ""}`}
+                style={{ clipPath: "polygon(0% 50%, 50% 0%, 50% 100%)" }}
+              >
+                <div className="absolute inset-0 bg-white/20 w-full h-full skew-x-12 transform-gpu"></div>
               </div>
+              <div
+                className={`absolute inset-0 bg-gradient-to-b from-red-400 via-red-600 to-red-900 
+                              transition-all duration-500 ease-out
+                              group-hover:from-cyan-300 group-hover:via-cyan-500 group-hover:to-blue-900
+                              ${isCracked ? "translate-x-4 rotate-6 opacity-80" : ""}`}
+                style={{ clipPath: "polygon(50% 0%, 100% 50%, 50% 100%)" }}
+              >
+                <div className="absolute inset-0 bg-white/10 w-full h-full -skew-x-12 transform-gpu"></div>
+              </div>
+            </div>
           </div>
-          <div className={`absolute -bottom-16 left-1/2 -translate-x-1/2 h-4 bg-red-600/20 blur-xl rounded-full transition-all duration-700 
-                          group-hover:bg-cyan-500/40 ${isCracked ? 'w-32 opacity-10' : 'w-16'}`}></div>
-          
+          <div
+            className={`absolute -bottom-16 left-1/2 -translate-x-1/2 h-4 bg-red-600/20 blur-xl rounded-full transition-all duration-700 
+                          group-hover:bg-cyan-500/40 ${isCracked ? "w-32 opacity-10" : "w-16"}`}
+          ></div>
+
           {/* Label indicating it can be clicked to start when cracked */}
           {isCracked && !isStarting && (
             <div className="absolute top-48 left-1/2 -translate-x-1/2 whitespace-nowrap text-cyan-400 font-mono text-[10px] tracking-[0.3em] uppercase animate-pulse">
-                Click to Initialize
+              Click to Initialize
             </div>
           )}
         </div>
@@ -195,7 +214,5 @@ const Crystal = ({ onSimulationStart }) => {
     </>
   );
 };
-
-export default Crystal;
 
 export default Crystal;

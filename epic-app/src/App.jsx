@@ -244,10 +244,9 @@ function App() {
       ) : (
         <div className="relative w-full h-full flex animate-in fade-in duration-1000">
           
-          {/* LEFT: CRYSTAL VISUALIZER */}
-          <div className="w-1/2 relative min-h-screen flex items-center justify-center border-r border-white/5">
-             {/* We use the Crystal component visuals directly here but simplified */}
-             <div className="relative -translate-x-32 scale-75">
+          {/* LEFT: CRYSTAL VISUALIZER (60% width for better spacing) */}
+          <div className="w-[60%] relative min-h-screen flex items-center justify-center border-r border-white/5">
+             <div className="relative scale-90 transition-all duration-1000">
                 {PERSONALITY_TYPES.map((type, index) => (
                   <OrbitingCircle2 
                     key={type}
@@ -269,8 +268,8 @@ function App() {
              </div>
           </div>
           
-          {/* RIGHT: CHAT WINDOW */}
-          <div className="w-1/2 flex flex-col h-screen z-50 p-10">
+          {/* RIGHT: CHAT WINDOW (40% width) */}
+          <div className="w-[40%] flex flex-col h-screen z-50 p-10 animate-in slide-in-from-right-10 duration-1000">
              <div className="flex justify-between items-center mb-6">
                 <div>
                     <div className="text-yellow-500 font-mono tracking-[0.3em] uppercase text-xs font-bold animate-pulse">
