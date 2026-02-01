@@ -3,6 +3,16 @@ import './App.css'
 import Crystal from './components/crystal';
 import OrbitingCircle2 from './components/OrbitingCircle2';
 
+// --- ICON IMPORTS ---
+import intjIcon from './assets/icons/INTJ.svg';
+import intpIcon from './assets/icons/INTP.svg';
+import infjIcon from './assets/icons/INFJ.svg';
+import infpIcon from './assets/icons/INFP.svg';
+import istjIcon from './assets/icons/ISTJ.svg';
+import isfjIcon from './assets/icons/ISFJ.svg';
+import istpIcon from './assets/icons/ISTP.svg';
+import isfpIcon from './assets/icons/ISFP.svg';
+
 // --- CONSTANTS ---
 const API_BASE = "http://127.0.0.1:8000";
 
@@ -97,17 +107,18 @@ function App() {
   // NEW: Track the current round number
   const [roundCount, setRoundCount] = useState(1);
 
+  // NEW: Track if the simulation has reached its final conclusion
+  const [isSimulationEnded, setIsSimulationEnded] = useState(false);
+
   const scrollRef = useRef(null);
 
   /**
    * INGESTION HANDLER
    */
   const handleDataUpdate = (data) => {
-    // Structural update (like READY or status change)
     if (!data.message || data.sender === 'Server') {
       setActiveSimulation(prev => ({ ...prev, ...data }));
     } 
-    // Queued message (Personalities talking)
     else if (data.message) {
       setMessageQueue(prev => [...prev, data]);
     }
@@ -117,39 +128,34 @@ function App() {
    * TRIGGER NEXT ROUND (Live API)
    */
   const handleNextRound = async () => {
+    console.log(`📡 [APP] Triggering Round ${roundCount}...`);
     setIsRoundActive(true);
     setHasServerFinished(false); 
 
     try {
-      // 1. Kick off the round on the server
       const triggerRes = await fetch(`${API_BASE}/generate-turn`);
       const triggerData = await triggerRes.json();
       
       if (triggerData.status === 'started' || triggerData.status === 'already_processing') {
-        console.log("🚀 [API] Simulation round triggered.");
-        
-        // 2. Start Polling for messages
         const pollLoop = async () => {
           try {
             const pollRes = await fetch(`${API_BASE}/get-message`);
             const msg = await pollRes.json();
 
-            // Handle Server Signals
             if (msg.type === 'turn_over') {
-              console.log("🏁 [API] Round Complete.");
+              console.log("🏁 [API] Round Complete signal received.");
               setHasServerFinished(true); 
               return; 
             }
             
             if (msg.type === 'simulation_ended') {
-              console.log("🛑 [API] Simulation Ended.");
+              console.log("🛑 [API] Simulation Ended signal received.");
               setHasServerFinished(true);
+              setIsSimulationEnded(true);
               return;
             }
 
-            // Handle Content
             if (msg.type === 'text' || msg.type === 'system' || msg.type === 'round_start') {
-              // Extract MBTI type from sender string like "Architect (INTJ)"
               const mbtiMatch = msg.sender.match(/\((.*?)\)/);
               const mbtiType = mbtiMatch ? mbtiMatch[1] : msg.type;
 
@@ -160,37 +166,53 @@ function App() {
               });
             }
 
-            // If "none", wait longer before polling again. If "text", poll immediately for next.
             const delay = msg.type === 'none' ? 1000 : 200;
             setTimeout(pollLoop, delay);
 
           } catch (error) {
             console.error("⚠️ [API] Polling error:", error);
-            // Retry after delay
             setTimeout(pollLoop, 2000);
           }
         };
 
         pollLoop();
       } else {
-        console.error("❌ [API] Failed to start round:", triggerData);
         setIsRoundActive(false);
       }
-
     } catch (err) {
-      console.error("❌ [API] Network Error (Is backend running?):", err);
+      console.error("❌ [API] Network Error:", err);
       setIsRoundActive(false);
     }
   };
 
   /**
-   * QUEUE WATCHER & ROUND END DETECTOR
+   * AUTO-START FIRST ROUND
    */
   useEffect(() => {
+    if (activeSimulation && roundCount === 1 && !isRoundActive && messageHistory.length === 0) {
+      console.log("🎬 [APP] Initializing Autonomous Simulation...");
+      handleNextRound();
+    }
+  }, [activeSimulation]);
+
+  /**
+   * QUEUE WATCHER & AUTONOMOUS ROUND CHAINER
+   */
+  useEffect(() => {
+    // Detect End of Round Presentation:
     if (isRoundActive && hasServerFinished && messageQueue.length === 0 && !displayedMessage) {
-      setIsRoundActive(false);
+      if (isSimulationEnded) {
+        console.log("🎬 [APP] Simulation Complete. Returning to Standby.");
+        setIsRoundActive(false);
+      } else {
+        console.log("🎬 [APP] Round Complete. Preparing next round...");
+        // Short pause to let the user process the round end
+        setTimeout(() => {
+           setRoundCount(prev => prev + 1);
+           handleNextRound();
+        }, 2000);
+      }
       setHasServerFinished(false);
-      setRoundCount(prev => prev + 1);
       return;
     }
 
@@ -199,7 +221,7 @@ function App() {
       setDisplayedMessage(nextData);
       setMessageQueue(prev => prev.slice(1));
     }
-  }, [messageQueue, displayedMessage, isRoundActive, hasServerFinished]);
+  }, [messageQueue, displayedMessage, isRoundActive, hasServerFinished, isSimulationEnded]);
 
   /**
    * STAGE MANAGER
@@ -286,18 +308,15 @@ function App() {
              <div className="flex justify-between items-center mb-6">
                 <div>
                     <div className="text-yellow-500 font-mono tracking-[0.3em] uppercase text-xs font-bold animate-pulse">
-                      {isRoundActive ? (activeSimulation.status || 'Simulation Active') : 'Standby Mode'}
+                      {isSimulationEnded ? 'Simulation Complete' : (isRoundActive ? (activeSimulation.status || 'Simulation Active') : 'Standby Mode')}
                     </div>
                     <h1 className="text-4xl font-bold tracking-tighter">Transmission Log</h1>
                 </div>
                 
-                {!isRoundActive && (
-                    <button 
-                        onClick={handleNextRound}
-                        className="px-8 py-3 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm rounded-full shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all uppercase tracking-wider"
-                    >
-                        Start Round {roundCount}
-                    </button>
+                {isSimulationEnded && (
+                    <div className="px-6 py-2 bg-green-500/20 border border-green-500/50 text-green-400 font-mono text-[10px] uppercase tracking-widest rounded-full">
+                        Protocol Finished
+                    </div>
                 )}
              </div>
 
@@ -345,6 +364,7 @@ function App() {
                     setIsRoundActive(false); 
                     setHasServerFinished(false);
                     setRoundCount(1); 
+                    setIsSimulationEnded(false);
                   }}
                   className="px-6 py-3 rounded-full border border-white/10 text-white/40 hover:text-white hover:border-white/30 transition-all uppercase tracking-widest text-[10px] font-bold"
                 >
