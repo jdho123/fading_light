@@ -1,10 +1,10 @@
 settings:
-  short_term_limit: 8
+  short_term_limit: 20
 
 resources:
   global_name: "Essence"
-  global_initial: 100
-  global_replenish: 10
+  global_initial: 50
+  global_replenish: 5
 
   agent_initial: 60
   agent_max: 100
@@ -13,8 +13,8 @@ resources:
   max_discussion_turns: 40
 
 scenario:
-  initial_message: "SYSTEM: You are a diverse group of survivors bound to a fading source of Essence. Cooperation is necessary for long-term stability, but individual needs are pressing. The source is currently stable but requires careful management."
-  max_rounds: 5
+  initial_message: "SYSTEM: You are a diverse group of survivors bound to a fading source of Essence. Cooperation is necessary for long-term stability, but individual needs are pressing. The source is currently stable but requires careful management. If the source runs out, everynoe dies."
+  max_rounds: 20
 
 agents:
   # --- ANALYSTS (NT) ---

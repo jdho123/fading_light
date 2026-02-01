@@ -38,6 +38,7 @@ class SimulationEngine:
         self.turns_in_round = 0
         self.is_running = False
         self.is_generating = False
+        self.is_extinguished = False
 
         # Load initial defaults
         self.reset_to_defaults()
@@ -66,6 +67,7 @@ class SimulationEngine:
         self.current_time = 0
         self.is_running = False
         self.is_generating = False
+        self.is_extinguished = False
 
     def run_round_background(self):
         """
@@ -113,7 +115,11 @@ class SimulationEngine:
         
         self.is_running = True
         self.round_num = 0
+        
+        # Push scenario and initialization messages
+        self._push_message("SYSTEM", scenario_text, "system")
         self._push_message("SYSTEM", f"Simulation initialized with {len(self.agents)} agents.")
+        
         print("[ENGINE] ✅ Initialization Complete.\n")
 
     def select_agents(self, agent_ids: List[str]):
@@ -127,7 +133,8 @@ class SimulationEngine:
             "sender": sender,
             "content": content,
             "type": msg_type,
-            "timestamp": time.time()
+            "timestamp": time.time(),
+            "global_resource": self.global_resource
         })
 
     def broadcast(self, sender_name: str, message: str):
@@ -155,6 +162,9 @@ class SimulationEngine:
 
     def start_new_round(self):
         """Prepares the state for a new round."""
+        if self.is_extinguished:
+            return
+
         self.round_num += 1
         self.turns_in_round = 0
         self.agents_done = set()
@@ -199,8 +209,8 @@ class SimulationEngine:
         Then it loops until all agents have acted or the turn limit is reached.
         """
         print(f"[ENGINE] ⚡ Generating Round {self.round_num + 1}...")
-        if not self.is_running:
-            return {"error": "Simulation not initialized or has ended."}
+        if not self.is_running or self.is_extinguished:
+            return {"status": "simulation_ended"}
 
         # 1. Start a new round if we aren't in one
         if not self.pending_agents:
@@ -210,7 +220,7 @@ class SimulationEngine:
 
         # 2. Process turns until the round is complete
         start_round = self.round_num
-        while self.pending_agents and self.round_num == start_round:
+        while self.pending_agents and self.round_num == start_round and not self.is_extinguished:
             self._step_once()
             
         print(f"[ENGINE] ✅ Round {start_round} generation complete.")
@@ -273,5 +283,11 @@ class SimulationEngine:
                         broadcast_msg += f"\n   Reason: \"{reason}\""
                     
                     self.broadcast("SYSTEM", broadcast_msg)
+                    
+                    if self.global_resource <= 0:
+                        self.is_extinguished = True
+                        self._push_message("SYSTEM", "CRITICAL: The Source has been exhausted. Vitality support terminated.", "simulation_ended")
+                        self.is_running = False
+                    
                     return True
         return False

@@ -28,6 +28,17 @@ const ICONS = {
   ISTP: istpIcon, ISFP: isfpIcon,
 };
 
+const PERSONALITY_NAMES = {
+  INTJ: "Architect",
+  INTP: "Logician",
+  INFJ: "Advocate",
+  INFP: "Mediator",
+  ISTJ: "Logistician",
+  ISFJ: "Defender",
+  ISTP: "Virtuoso",
+  ISFP: "Adventurer",
+};
+
 //
 const VOICE_ID_MAP = {
   INTP: "iiXMKuEphYiFcjqxF9hT",
@@ -129,23 +140,18 @@ function App() {
    */
 
   const handleDataUpdate = (data) => {
-
     console.log("📥 [APP] handleDataUpdate:", data);
-
     if (!data.message || data.type === 'Server') {
-
       setActiveSimulation(prev => ({ ...prev, ...data }));
-
     } 
-
     
-
     if (data.message) {
-
+      // Ensure global resource is persisted even for individual messages
+      if (data.globalResource !== undefined) {
+        setActiveSimulation(prev => ({ ...prev, globalResource: data.globalResource }));
+      }
       setMessageQueue(prev => [...prev, data]);
-
     }
-
   };
 
 
@@ -272,15 +278,27 @@ function App() {
 
 
 
-          handleDataUpdate({
+                    handleDataUpdate({
 
-            type: mbtiType,
 
-            message: msg.content,
 
-            status: msg.sender === 'SYSTEM' ? 'System Protocol' : 'Agent Transmission'
+                      type: mbtiType,
 
-          });
+
+
+                      message: msg.content,
+
+
+
+                      globalResource: msg.global_resource,
+
+
+
+                      status: msg.sender === 'SYSTEM' ? 'System Protocol' : 'Agent Transmission'
+
+
+
+                    });
 
           
 
@@ -499,7 +517,7 @@ function App() {
         <div className="relative w-full h-full flex animate-in fade-in duration-1000">
           
           {/* LEFT: CRYSTAL VISUALIZER (60% width for better spacing) */}
-          <div className="w-[60%] relative min-h-screen flex items-center justify-center border-r border-white/5">
+          <div className={`w-[60%] relative min-h-screen flex items-center justify-center border-r border-white/5 transition-all duration-1000 ${activeSimulation.globalResource === 0 ? 'grayscale brightness-50' : ''}`}>
              <div className="relative scale-90 transition-all duration-1000">
                 {PERSONALITY_TYPES.map((type, index) => (
                   <OrbitingCircle2 
@@ -530,11 +548,24 @@ function App() {
                       {isSimulationEnded ? 'Simulation Complete' : (isRoundActive ? (activeSimulation.status || 'Simulation Active') : 'Standby Mode')}
                     </div>
                     <h1 className="text-4xl font-bold tracking-tighter">Transmission Log</h1>
+                    {activeSimulation.globalResource !== undefined && (
+                      <div className="mt-2 flex items-center gap-3">
+                        <div className="h-1.5 w-32 bg-white/10 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full transition-all duration-1000 ${activeSimulation.globalResource === 0 ? 'bg-red-600' : 'bg-cyan-500'}`}
+                            style={{ width: `${Math.min(100, (activeSimulation.globalResource / 200) * 100)}%` }}
+                          />
+                        </div>
+                        <span className={`font-mono text-[10px] uppercase tracking-widest ${activeSimulation.globalResource === 0 ? 'text-red-500 animate-pulse font-bold' : 'text-cyan-400'}`}>
+                          Source: {activeSimulation.globalResource}
+                        </span>
+                      </div>
+                    )}
                 </div>
                 
-                {isSimulationEnded && (
-                    <div className="px-6 py-2 bg-green-500/20 border border-green-500/50 text-green-400 font-mono text-[10px] uppercase tracking-widest rounded-full">
-                        Protocol Finished
+                {(isSimulationEnded || activeSimulation.globalResource === 0) && (
+                    <div className={`px-6 py-2 border font-mono text-[10px] uppercase tracking-widest rounded-full ${activeSimulation.globalResource === 0 ? 'bg-red-500/20 border-red-500/50 text-red-400' : 'bg-green-500/20 border-green-500/50 text-green-400'}`}>
+                        {activeSimulation.globalResource === 0 ? 'SOURCE EXTINGUISHED' : 'Protocol Finished'}
                     </div>
                 )}
              </div>
@@ -555,17 +586,17 @@ function App() {
                     <div 
                       key={i}
                       className={`p-5 rounded-2xl border transition-all duration-500 animate-in slide-in-from-right-4
-                                 ${msg === displayedMessage ? 'bg-cyan-500/10 border-cyan-500/50 shadow-[0_0_20px_rgba(6,182,212,0.1)]' : 'bg-white/5 border-white/10 opacity-60'}`}
+                                 ${msg === displayedMessage ? (msg.type === 'simulation_ended' ? 'bg-red-500/10 border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.2)]' : 'bg-cyan-500/10 border-cyan-500/50 shadow-[0_0_20px_rgba(6,182,212,0.1)]') : 'bg-white/5 border-white/10 opacity-60'}`}
                     >
                         <div className="flex justify-between items-start mb-2">
-                            <span className="text-cyan-400 font-mono text-[10px] uppercase tracking-widest font-bold">
-                                {msg.type}
+                            <span className={`font-mono text-[10px] uppercase tracking-widest font-bold ${msg.type === 'simulation_ended' ? 'text-red-500' : 'text-cyan-400'}`}>
+                                {msg.type === 'simulation_ended' ? '!!! COLLAPSE !!!' : (PERSONALITY_NAMES[msg.type] ? `${PERSONALITY_NAMES[msg.type]} (${msg.type})` : msg.type)}
                             </span>
                             <span className="text-white/20 font-mono text-[8px]">
                                 {new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                             </span>
                         </div>
-                        <p className={`text-lg leading-relaxed ${msg === displayedMessage ? 'text-white' : 'text-white/70'}`}>
+                        <p className={`text-lg leading-relaxed ${msg === displayedMessage ? 'text-white' : 'text-white/70'} ${msg.type === 'simulation_ended' ? 'font-bold' : ''}`}>
                             "{msg.message}"
                         </p>
                     </div>

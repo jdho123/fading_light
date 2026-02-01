@@ -170,12 +170,17 @@ class SimulatedAgent:
 
         emotional_state = self._get_emotional_state(state["personal_essence"])
 
+        depletion_notice = ""
+        if state["global_essence"] <= 0:
+            depletion_notice = "\n!!! CRITICAL: THE SOURCE IS EXTINGUISHED. You are consuming your last internal reserves. Death is certain. This is your final message to the group. !!!\n"
+
         # Construct the System Prompt
         system_prompt = f"""
         You are {self.name}.
         
         Scenario:
         {self.scenario}
+        {depletion_notice}
         
         Personality Profile:
         {self.personality}
