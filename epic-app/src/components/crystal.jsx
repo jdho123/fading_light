@@ -56,12 +56,13 @@ const PERSONALITY_DESCRIPTIONS = {
   ESFP: "Spontaneous, energetic and enthusiastic people - life is never boring around them."
 };
 
-const Crystal = () => {
+const Crystal = ({ onSimulationStart }) => {
   const [shockwaves, setShockwaves] = useState([]);
   const [isCracked, setIsCracked] = useState(false);
   
   const [hoveredOrbId, setHoveredOrbId] = useState(null);
   const [selectedPersonality, setSelectedPersonality] = useState(null); 
+  const [confirmedPersonality, setConfirmedPersonality] = useState(null);
   const [isInteractionLocked, setIsInteractionLocked] = useState(false);
   
   const leaveTimeoutRef = useRef(null);
@@ -116,6 +117,8 @@ const Crystal = () => {
           description={PERSONALITY_DESCRIPTIONS[selectedPersonality]}
           icon={ICONS[selectedPersonality]}
           onClose={() => setSelectedPersonality(null)}
+          onSelect={(type) => setConfirmedPersonality(type)}
+          onSimulationStart={onSimulationStart}
         />
       )}
 
