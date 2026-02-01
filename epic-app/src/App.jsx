@@ -3,20 +3,9 @@ import './App.css'
 import Crystal from './components/crystal';
 import OrbitingCircle2 from './components/OrbitingCircle2';
 
-// --- SERVICE IMPORTS ---
-import { fakeSimulationService } from './services/fakeSimulationService';
-
-// --- ICON IMPORTS ---
-import intjIcon from './assets/icons/INTJ.svg';
-import intpIcon from './assets/icons/INTP.svg';
-import infjIcon from './assets/icons/INFJ.svg';
-import infpIcon from './assets/icons/INFP.svg';
-import istjIcon from './assets/icons/ISTJ.svg';
-import isfjIcon from './assets/icons/ISFJ.svg';
-import istpIcon from './assets/icons/ISTP.svg';
-import isfpIcon from './assets/icons/ISFP.svg';
-
 // --- CONSTANTS ---
+const API_BASE = "http://127.0.0.1:8000";
+
 const PERSONALITY_TYPES = [
   'INTJ', 'INTP', 'INFJ', 'INFP',
   'ISTJ', 'ISFJ', 'ISTP', 'ISFP'
@@ -125,48 +114,72 @@ function App() {
   };
 
   /**
-   * TRIGGER NEXT ROUND
+   * TRIGGER NEXT ROUND (Live API)
    */
   const handleNextRound = async () => {
     setIsRoundActive(true);
     setHasServerFinished(false); 
-    
-    const useFakeData = activeSimulation?.config?.useFakeData ?? true;
 
-    if (useFakeData) {
-      if (roundCount === 1) {
-        await fakeSimulationService.initializeSimulation();
+    try {
+      // 1. Kick off the round on the server
+      const triggerRes = await fetch(`${API_BASE}/generate-turn`);
+      const triggerData = await triggerRes.json();
+      
+      if (triggerData.status === 'started' || triggerData.status === 'already_processing') {
+        console.log("🚀 [API] Simulation round triggered.");
+        
+        // 2. Start Polling for messages
+        const pollLoop = async () => {
+          try {
+            const pollRes = await fetch(`${API_BASE}/get-message`);
+            const msg = await pollRes.json();
+
+            // Handle Server Signals
+            if (msg.type === 'turn_over') {
+              console.log("🏁 [API] Round Complete.");
+              setHasServerFinished(true); 
+              return; 
+            }
+            
+            if (msg.type === 'simulation_ended') {
+              console.log("🛑 [API] Simulation Ended.");
+              setHasServerFinished(true);
+              return;
+            }
+
+            // Handle Content
+            if (msg.type === 'text' || msg.type === 'system' || msg.type === 'round_start') {
+              // Extract MBTI type from sender string like "Architect (INTJ)"
+              const mbtiMatch = msg.sender.match(/\((.*?)\)/);
+              const mbtiType = mbtiMatch ? mbtiMatch[1] : msg.type;
+
+              handleDataUpdate({
+                type: msg.sender === 'SYSTEM' ? 'Server' : mbtiType,
+                message: msg.content,
+                status: msg.sender === 'SYSTEM' ? 'System Alert' : 'Incoming Transmission'
+              });
+            }
+
+            // If "none", wait longer before polling again. If "text", poll immediately for next.
+            const delay = msg.type === 'none' ? 1000 : 200;
+            setTimeout(pollLoop, delay);
+
+          } catch (error) {
+            console.error("⚠️ [API] Polling error:", error);
+            // Retry after delay
+            setTimeout(pollLoop, 2000);
+          }
+        };
+
+        pollLoop();
+      } else {
+        console.error("❌ [API] Failed to start round:", triggerData);
+        setIsRoundActive(false);
       }
-      await fakeSimulationService.startNextRound();
 
-      const pollLoop = async () => {
-        try {
-          const msg = await fakeSimulationService.pollMessage();
-
-          if (msg.type === 'turn_over') {
-            setHasServerFinished(true); 
-            return; 
-          }
-          
-          if (msg.type === 'simulation_ended') {
-            setHasServerFinished(true);
-            return;
-          }
-
-          handleDataUpdate({
-            type: msg.type === 'SYSTEM' ? 'Server' : msg.type,
-            message: msg.content,
-            status: msg.sender === 'SYSTEM' ? 'System Alert' : 'Incoming Transmission'
-          });
-
-          setTimeout(pollLoop, 200); 
-
-        } catch (error) {
-          console.error("⚠️ [FAKE] Polling error:", error);
-        }
-      };
-
-      pollLoop();
+    } catch (err) {
+      console.error("❌ [API] Network Error (Is backend running?):", err);
+      setIsRoundActive(false);
     }
   };
 
@@ -323,7 +336,8 @@ function App() {
              
              <div className="mt-6 flex gap-4">
                 <button 
-                  onClick={() => {
+                  onClick={async () => {
+                    await fetch(`${API_BASE}/reset`, { method: 'POST' }).catch(() => {});
                     setActiveSimulation(null);
                     setMessageQueue([]);
                     setDisplayedMessage(null);

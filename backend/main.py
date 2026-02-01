@@ -26,9 +26,6 @@ class SettingsUpdate(BaseModel):
     agent_decay: Optional[int] = None
     max_rounds: Optional[int] = None
 
-class AgentSelection(BaseModel):
-    agent_ids: List[str]
-
 # --- Endpoints ---
 
 @app.get("/")
@@ -41,29 +38,22 @@ async def update_settings(settings: SettingsUpdate):
     engine.update_settings(settings.dict(exclude_unset=True))
     return {"message": "Settings updated successfully.", "current_resource": engine.global_resource}
 
-@app.post("/agents")
-async def select_agents(selection: AgentSelection):
-    """
-    Select which agents will participate and reset the simulation state.
-    This does NOT start generation.
-    """
-    if not os.getenv("ANTHROPIC_API_KEY"):
-        raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY not set on server.")
-    
-    engine.select_agents(selection.agent_ids)
-    return {
-        "message": f"Simulation initialized with {len(engine.agents)} agents.",
-        "agents": [a.name for a in engine.agents]
-    }
+@app.post("/reset")
+async def reset_simulation():
+    """Reset the simulation engine to fresh state."""
+    engine.reset_to_defaults()
+    return {"message": "Simulation reset successfully."}
 
 @app.get("/generate-turn")
 async def generate_turn(background_tasks: BackgroundTasks):
     """
     Triggers the engine to process an entire round in the background.
-    Returns immediately with a status. Use /get-message to poll for results.
+    Automatically initializes with all agents if not already running.
     """
     if not engine.is_running:
-        raise HTTPException(status_code=400, detail="Simulation not initialized. Call /agents first.")
+        if not os.getenv("ANTHROPIC_API_KEY"):
+            raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY not set on server.")
+        engine.initialize_simulation()
     
     if engine.is_generating:
         return {"status": "already_processing", "message": "A round is already being generated."}

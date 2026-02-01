@@ -91,32 +91,35 @@ class SimulationEngine:
         if "agent_decay" in new_settings:
             self.res_config["agent_decay"] = new_settings["agent_decay"]
 
-    def select_agents(self, agent_ids: List[str]):
-        """Initializes only the selected subset of agents."""
-        print(f"Initializing Selected Agents: {agent_ids}")
-        self.agents = []
-        self.agent_resources = {}
+    def initialize_simulation(self):
+        """Initializes all agents defined in the config file and resets state."""
+        print("Initializing Simulation with all configured agents...")
+        self.reset_to_defaults()
         
         scenario_text = self.scenario.get("initial_message", "Simulation Start.")
         initial_agent_res = self.res_config.get("agent_initial", 70)
         
-        # Find agent configs in the main list
-        for agent_id in agent_ids:
-            agent_cfg = next((a for a in self.config["agents"] if a["id"] == agent_id), None)
-            if agent_cfg:
-                agent = SimulatedAgent(
-                    agent_id=agent_cfg["id"],
-                    name=agent_cfg["name"],
-                    personality=agent_cfg["personality"],
-                    scenario=scenario_text,
-                    short_term_limit=self.short_term_limit
-                )
-                self.agents.append(agent)
-                self.agent_resources[agent.agent_id] = initial_agent_res
+        for agent_cfg in self.config["agents"]:
+            agent = SimulatedAgent(
+                agent_id=agent_cfg["id"],
+                name=agent_cfg["name"],
+                personality=agent_cfg["personality"],
+                scenario=scenario_text,
+                short_term_limit=self.short_term_limit
+            )
+            self.agents.append(agent)
+            self.agent_resources[agent.agent_id] = initial_agent_res
         
         self.is_running = True
         self.round_num = 0
         self._push_message("SYSTEM", f"Simulation initialized with {len(self.agents)} agents.")
+
+    def select_agents(self, agent_ids: List[str]):
+        """Legacy method or specific subset selection."""
+        # For now, we'll just redirect to initialize_simulation if we want everything
+        # or keep it as is if specific selection is still needed.
+        # But per user request, we are moving to config-driven.
+        self.initialize_simulation()
 
     def _push_message(self, sender: str, content: str, msg_type: str = "text"):
         """Internal helper to queue messages for polling."""

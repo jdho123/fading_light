@@ -1,7 +1,6 @@
 import React, { useState, useRef } from "react";
 import OrbitingCircle from "./OrbitingCircle";
 import PersonalityCategories from "./PersonalityCategories";
-import { personalityService } from "../services/personalityService";
 
 import intjIcon from "../assets/icons/INTJ.svg";
 // ... (rest of icon imports kept for now to avoid breaking constants)
@@ -69,50 +68,20 @@ const Crystal = ({ onSimulationStart }) => {
     }, 1000);
   };
 
-  const handleStart = async () => {
-    if (isStarting) return;
-    setIsStarting(true);
-    setIsInteractionLocked(true);
-
-    const defaultConfig = {
-      useFakeData: true,
-      textToSpeech: false,
-      globalReplenish: 50,
-      globalInit: 600,
-      agentMax: 100,
-      agentInit: 100,
-      agentDecay: 10,
-    };
-
-    await personalityService.startSimulation((data) => {
-      if (data.sender === "Server" && data.message === "READY") {
-        onSimulationStart({
-          type: "SYSTEM",
-          icon: null,
-          config: defaultConfig,
-          status: "Establishing Protocol...",
-        });
-        return;
-      }
-      onSimulationStart(data);
-    });
-  };
-
   const handleCrackToggle = () => {
     if (isInteractionLocked || isStarting) return;
 
     // Trigger visual state
     setIsCracked(true);
+    setIsStarting(true);
+    setIsInteractionLocked(true);
     
     // Immediate callback to App to switch view/show chat
     onSimulationStart({
       type: "SYSTEM",
       status: "Initializing...",
-      config: { useFakeData: true }
+      config: { useFakeData: false }
     });
-
-    // Proceed with service initialization
-    handleStart();
   };
 
   const handleOrbHover = (id) => {
