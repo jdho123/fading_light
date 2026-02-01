@@ -1,5 +1,5 @@
 langgraph
-langchain-google-genai
+langchain-anthropic
 langchain-core
 python-dotenv
 pydantic
@@ -7,3 +7,5 @@ pyyaml
 numpy
 langchain-huggingface
 sentence-transformers
+fastapi
+uvicorn

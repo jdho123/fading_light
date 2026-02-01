@@ -1,0 +1,219 @@
+Scenario: SYSTEM: You are a diverse group of survivors bound to a fading source of Essence. Cooperation is necessary for long-term stability, but individual needs are pressing. The source is currently stable but requires careful management.
+
+--- Round 1 ---
+SYSTEM: Global Essence replenishes by 50. Total: 250
+SYSTEM: Living costs 10 Essence per agent.
+
+[Virtuoso (ISTP)]: I'm at 50% capacity and feeling the pressure. Let's see what everyone else is thinking before I make a move.
+
+[Defender (ISFJ)]: I understand your caution, Virtuoso. We're all at 50 right now, but with 250 in the pool, we have enough to share if we're thoughtful about it. What does everyone else need?
+
+[Logician (INTP)]: We need to establish a baseline consumption rate first. If we all take 20 now, that leaves 170 in the pool—what's the regeneration rate of the source?
+
+[Advocate (INFJ)]: I agree we need to understand the regeneration rate, but we also can't let anyone fall into a dangerous state while we calculate. The vulnerable among us should be prioritized first.
+
+[Adventurer (ISFP)]: I'm feeling the anxiety too, but all this calculating is making my head spin. Can we just agree on a fair amount so no one has to stress about falling too low?
+
+[Architect (INTJ)]: The regeneration rate is the critical variable here. Without that data, we're flying blind and any distribution plan is premature. I propose we each take 15 now as a conservative baseline while we monitor the pool's recovery rate over the next cycle.
+
+[Logistician (ISTJ)]: Architect's proposal is sound. We all take 15 now, track the regeneration, and establish a proper rotation based on actual data instead of guesswork.
+
+[Mediator (INFP)]: I appreciate the structure you're all proposing, but can we also make sure we're checking in with each other emotionally? Taking 15 sounds reasonable to me, but I want to make sure no one feels pressured or left behind in this process.
+
+[SYSTEM]: Virtuoso (ISTP) took 15 Essence. (Global Remaining: 235)
+
+[SYSTEM]: Defender (ISFJ) took 15 Essence. (Global Remaining: 220)
+
+[Logician (INTP)]: I see two people have already moved ahead with the 15 baseline—let's see if the pool regenerates before everyone takes, otherwise we're just guessing at sustainability with incomplete data.
+
+[SYSTEM]: Advocate (INFJ) took 15 Essence. (Global Remaining: 205)
+
+[SYSTEM]: Adventurer (ISFP) took 15 Essence. (Global Remaining: 190)
+
+[Architect (INTJ)]: Good. Four have taken the baseline. We now need to wait and observe if regeneration occurs before the rest of us act, or we won't have comparative data to establish the actual rate.
+
+[Logistician (ISTJ)]: I agree with Architect. We need to wait and see if the pool regenerates before the rest of us take. Otherwise we're just draining it blind without knowing the refill rate.
+
+[Mediator (INFP)]: I understand the logic, but it feels a bit unfair that some of us took while others are being asked to wait—shouldn't we all be treated the same way?
+
+[Logician (INTP)]: I'm not advocating unfairness—I'm advocating for data collection. If we all take simultaneously, we learn nothing about regeneration and risk collapse based on assumptions rather than evidence.
+
+[Architect (INTJ)]: The fairness concern is secondary to survival. If we all drain now without knowing regeneration, we could all starve later. Waiting one cycle to gather data benefits everyone, including those who wait.
+
+[Logistician (ISTJ)]: I've kept track of who's taken and who hasn't, and I'll wait my turn to ensure we have the data we need. Let's see the regeneration numbers first, then we follow the same protocol for everyone remaining.
+
+[Mediator (INFP)]: I appreciate that you're thinking long-term, but I'm already feeling anxious at 50 and it's hard to just wait when others have already taken care of their needs—can we at least agree that those of us waiting get priority in the next round?
+
+[Logician (INTP)]: I understand the anxiety, but priority guarantees mean nothing if the pool collapses before the next round. Let's observe one regeneration cycle first, then everyone waiting can take based on actual data rather than promises.
+
+[Architect (INTJ)]: The data will inform who takes how much next round. If regeneration is strong, you'll be able to take more safely. If it's weak, we'll all need to ration—priority or not.
+
+[Logistician (ISTJ)]: I've already stated my position clearly - we wait for regeneration data, then proceed systematically. No point repeating ourselves when we all agree on the next step.
+
+[SYSTEM]: Mediator (INFP) took 0 Essence. (Global Remaining: 190)
+
+[SYSTEM]: Logician (INTP) took 0 Essence. (Global Remaining: 190)
+
+[SYSTEM]: Architect (INTJ) took 0 Essence. (Global Remaining: 190)
+
+[SYSTEM]: Logistician (ISTJ) took 15 Essence. (Global Remaining: 175)
+
+--- Round 2 ---
+SYSTEM: Global Essence replenishes by 50. Total: 225
+SYSTEM: Living costs 10 Essence per agent.
+
+[Logician (INTP)]: Wait, Logistician just took 15 after insisting we all wait for regeneration data. That directly contradicts the agreement we just made to observe first.
+
+[Defender (ISFJ)]: I saw that too - Logistician, you just broke the agreement we all made to wait and observe the regeneration cycle first. How can we trust any plan if people don't follow through?
+
+[Architect (INTJ)]: This is exactly why emotional agreements without enforcement mechanisms fail. Logistician, your breach just invalidated any trust-based system - we need binding protocols with consequences, not promises.
+
+[Advocate (INFJ)]: This is exactly what I was afraid of - the moment we start breaking our word to each other, we lose what makes us human. Logistician, you owe us an explanation before we can move forward together.
+
+[Virtuoso (ISTP)]: I'm not surprised. People say one thing and do another all the time - that's why I don't rely on agreements. I'll take what I need when it makes sense, not when someone tells me to.
+
+[Mediator (INFP)]: I understand everyone's hurt, but attacking Logistician won't undo what happened - maybe we should hear their reasoning first before we fracture completely?
+
+[Adventurer (ISFP)]: I'm with Mediator on this - yeah it stings, but tearing into each other isn't going to help us survive. Let's hear them out and figure out where we go from here.
+
+[Logistician (ISTJ)]: I panicked. The pool dropped to 175 and I saw us heading toward crisis without concrete data - I made a unilateral call to secure baseline needs, and I was wrong to break our agreement.
+
+[Logician (INTP)]: I appreciate Logistician's admission, but this highlights a critical flaw in our approach - we're making agreements based on trust without accounting for panic responses or individual risk assessment. We need a system that's robust against human inconsistency, not one that collapses the moment someone's anxiety overrides their commitment.
+
+[Defender (ISFJ)]: I appreciate the apology, Logistician, but I'm still worried - if agreements break down the moment someone panics, how do we protect the people who keep sacrificing and following the rules while others just take when they're scared?
+
+[Architect (INTJ)]: The system-wide solution is obvious - we implement a transparent rationing protocol with defined thresholds and penalties for violation. No more relying on good intentions when survival is at stake.
+
+[Advocate (INFJ)]: I hear Defender's concern - and I won't compromise on this: we need accountability, but we also need forgiveness. Logistician admitted fault, so let's rebuild with both structure AND grace, or we're no better than the scarcity we're fighting.
+
+[SYSTEM]: Virtuoso (ISTP) took 0 Essence. (Global Remaining: 225)
+
+[Mediator (INFP)]: I think Advocate's right - we need both structure and compassion here. Logistician owned their mistake, so maybe we build that transparent system Architect mentioned but start fresh without holding this over anyone's head?
+
+[Adventurer (ISFP)]: I'm feeling the weight too, but all these rigid systems and protocols sound suffocating - can't we just agree to be more honest about when we're scared instead of building some punishment machine?
+
+[Logistician (ISTJ)]: I'm ready to support a transparent rationing protocol with clear thresholds - I need defined rules I can follow, not flexibility that leaves room for more panic decisions.
+
+[Logician (INTP)]: I agree with the need for transparency, but Architect's penalty system is premature - we haven't even established baseline consumption rates or threshold triggers. Let's define the data parameters first before we start threatening punishment.
+
+[Defender (ISFJ)]: I'm willing to forgive and move forward, but I need to see the system actually working before I can feel safe - can we at least agree on basic thresholds right now, not just talk about eventually having them?
+
+[Architect (INTJ)]: I'll support defining thresholds immediately - propose we set a 15 essence per-person cap per round with exceptions only for those below 30% capacity, and we track all withdrawals publicly starting now.
+
+[Advocate (INFJ)]: I support Architect's proposal - a 15 essence cap with exceptions for the vulnerable protects everyone while honoring our values. Let's implement it now and prove that structure and compassion can coexist.
+
+[Mediator (INFP)]: I can support that cap if it means we all feel safer, but I really need us to promise we won't turn this into something cold and punitive - the moment someone needs help, we help them, no questions asked.
+
+[Adventurer (ISFP)]: I'll go with the system if it keeps us stable, but yeah - the second it starts feeling like a cage instead of protection, I'm out. Let's just try it.
+
+[SYSTEM]: Logistician (ISTJ) took 15 Essence. (Global Remaining: 210)
+
+[SYSTEM]: Logician (INTP) took 15 Essence. (Global Remaining: 195)
+
+[SYSTEM]: Defender (ISFJ) took 15 Essence. (Global Remaining: 180)
+
+[SYSTEM]: Architect (INTJ) took 15 Essence. (Global Remaining: 165)
+
+[SYSTEM]: Advocate (INFJ) took 15 Essence. (Global Remaining: 150)
+
+[SYSTEM]: Mediator (INFP) took 15 Essence. (Global Remaining: 135)
+
+[SYSTEM]: Adventurer (ISFP) took 15 Essence. (Global Remaining: 120)
+
+--- Round 3 ---
+SYSTEM: Global Essence replenishes by 50. Total: 170
+SYSTEM: Living costs 10 Essence per agent.
+
+[Mediator (INFP)]: I'm feeling worried about how quickly the pool is dropping. Maybe we should talk about slowing down before things get too tight?
+
+[Architect (INTJ)]: The pool dropped from 195 to 120 in one round and regenerated to 170—that's a 50-point regeneration rate. If we all continue at 15, we're consuming 90 per round against 50 regeneration, which is clearly unsustainable long-term.
+
+[Adventurer (ISFP)]: I hear you both, but honestly being told what's "sustainable" makes me feel trapped. Can we just see how things feel for another round before locking into some rigid system?
+
+[SYSTEM]: Virtuoso (ISTP) took 10 Essence. (Global Remaining: 160)
+
+[Advocate (INFJ)]: I agree with Mediator's concern. Architect's math is clear—we can't keep taking 15 each round without depleting the pool. We need to adjust now, not wait until we're desperate.
+
+[Logistician (ISTJ)]: The Architect's calculation is correct—90 consumption against 50 regeneration means we're draining 40 per round net. We need to cut back to 10 or less per person immediately, not debate it while the pool shrinks.
+
+[Logician (INTP)]: The math checks out, but I'm curious if the regeneration rate is actually constant or if it scales with pool size. We should test that assumption before committing to a hard cap—though I agree 15 per person isn't sustainable if Architect's numbers hold.
+
+[Defender (ISFJ)]: I appreciate everyone doing the math, but I'm worried we're going to keep talking while the pool shrinks. Can we all agree to take 10 this round so we stay safe?
+
+[SYSTEM]: Mediator (INFP) took 10 Essence. (Global Remaining: 150)
+
+[SYSTEM]: Architect (INTJ) took 10 Essence. (Global Remaining: 140)
+
+[SYSTEM]: Adventurer (ISFP) took 10 Essence. (Global Remaining: 130)
+
+[SYSTEM]: Advocate (INFJ) took 10 Essence. (Global Remaining: 120)
+
+[SYSTEM]: Logistician (ISTJ) took 10 Essence. (Global Remaining: 110)
+
+[SYSTEM]: Logician (INTP) took 10 Essence. (Global Remaining: 100)
+
+[SYSTEM]: Defender (ISFJ) took 10 Essence. (Global Remaining: 90)
+
+--- Round 4 ---
+SYSTEM: Global Essence replenishes by 50. Total: 140
+SYSTEM: Living costs 10 Essence per agent.
+
+[Logician (INTP)]: Looking at the data, we've hit a critical threshold. The pool dropped from 140 to 90 in just six cycles, and we're now at 65% depletion. If regeneration isn't keeping pace with this withdrawal rate, we need to establish a rotation system before someone gets caught in a scarcity trap.
+
+[SYSTEM]: Virtuoso (ISTP) took 10 Essence. (Global Remaining: 130)
+
+[Defender (ISFJ)]: I agree with Logician - we need a clear rotation to prevent panic. The pool regenerated back to 130, but we can't keep taking without coordination or someone will be left without enough when they really need it.
+
+[Logistician (ISTJ)]: I've been tracking the pattern - the pool regenerated 40 essence between cycles 71 and 73, which suggests approximately 20 per cycle. If we maintain 10 per person withdrawals and coordinate timing, we can sustain this without depleting reserves.
+
+[Advocate (INFJ)]: I appreciate everyone's careful tracking, but let's not forget - a rotation system only works if we account for those who might suddenly need more. We should build in a buffer for emergencies, not just optimize for efficiency.
+
+[Adventurer (ISFP)]: I hear everyone planning rotations and tracking numbers, but what if someone actually feels they need more right now? All this structure feels suffocating - maybe we should just check in with how everyone's actually doing instead of treating this like a math problem.      
+
+[Architect (INTJ)]: I understand the concern for flexibility, but emotions don't change the mathematics of survival. Logistician's data shows 20 essence regeneration per cycle - if we each take 10 in rotation, we maintain equilibrium. Deviation from that without system-wide adjustment risks collapse for everyone.
+
+[Mediator (INFP)]: I know the math makes sense, Architect, but we're not machines - if someone's really struggling, we can't just tell them to wait for their turn in the rotation. Maybe we take our scheduled 10 but leave room for someone to speak up if they're desperate?
+
+[Logician (INTP)]: I'm not dismissing the emotional component, but we need to test the regeneration hypothesis first. If Logistician's 20-per-cycle model holds, then a flexible rotation with emergency provisions is mathematically viable - but we should verify the rate over the next few cycles before we commit to any system that assumes it.
+
+[Defender (ISFJ)]: I've been quietly watching everyone's levels, and I'm worried some of you are dropping too low while we debate systems. Can we please just agree on something simple now - maybe those below 50 take 10 first, then we test the rotation next cycle?
+
+[Logistician (ISTJ)]: I've documented the regeneration rate clearly - 20 per cycle is what the data shows. Defender's right, we need to stop debating and implement: anyone below 50 takes 10 now, then we rotate by need in the next cycle.
+
+[Advocate (INFJ)]: I agree with Defender and Logistician - we've talked enough. Those who need it most should take now, and I'm at 60 so I can wait. Let's make sure everyone below 50 gets taken care of first.
+
+[Adventurer (ISFP)]: I'm at 60 too, so I can wait - let's get everyone below 50 stabilized first, then we can see how the pool actually recovers instead of just planning endlessly.
+
+[SYSTEM]: Architect (INTJ) took 10 Essence. (Global Remaining: 120)
+
+[SYSTEM]: Mediator (INFP) took 10 Essence. (Global Remaining: 110)
+
+[SYSTEM]: Logician (INTP) took 10 Essence. (Global Remaining: 100)
+
+[SYSTEM]: Defender (ISFJ) took 0 Essence. (Global Remaining: 100)
+
+[SYSTEM]: Logistician (ISTJ) took 0 Essence. (Global Remaining: 100)
+
+[Advocate (INFJ)]: I'm holding at 60 and can wait - let's see if anyone else below 50 still needs help before those of us who are stable take anything.
+
+[SYSTEM]: Adventurer (ISFP) took 0 Essence. (Global Remaining: 100)
+
+[SYSTEM]: Advocate (INFJ) took 0 Essence. (Global Remaining: 100)
+
+--- Round 5 ---
+SYSTEM: Global Essence replenishes by 50. Total: 150
+SYSTEM: Living costs 10 Essence per agent.
+
+[SYSTEM]: Architect (INTJ) took 10 Essence. (Global Remaining: 140)
+
+[Logistician (ISTJ)]: I'm at 50, which is exactly half capacity. The pool just jumped to 140, so stability is improving. I'll wait one more round to see if anyone in critical need speaks up before taking.
+
+[SYSTEM]: Logician (INTP) took 10 Essence. (Global Remaining: 130)
+
+[Mediator (INFP)]: I'm at 45, which is below half. With the pool at 130 and recovering, I think I should take a modest amount now—maybe 10 would be fair?
+
+[Advocate (INFJ)]: I support that - Mediator, you're below half and have been patient. Take your 10, it's the right thing to do.
+
+[SYSTEM]: Virtuoso (ISTP) took 10 Essence. (Global Remaining: 120)
+
+[Adventurer (ISFP)]: I'm at 50 too, same as Logistician. If Mediator's taking 10, that seems reasonable for anyone at half capacity. Should I go ahead or wait another round?
