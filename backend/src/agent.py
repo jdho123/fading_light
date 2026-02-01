@@ -82,7 +82,7 @@ class SimulatedAgent:
         if not api_key:
             raise ValueError("ANTHROPIC_API_KEY not found in environment variables.")
 
-        self.llm = ChatAnthropic(model="claude-sonnet-4-5-20250929", api_key=api_key)
+        self.llm = ChatAnthropic(model="claude-3-5-sonnet-latest", api_key=api_key)
         self.llm_with_tools = self.llm.bind_tools([take_essence])
 
         # Use local embeddings to avoid API quotas

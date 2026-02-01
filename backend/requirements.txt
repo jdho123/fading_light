@@ -7,3 +7,5 @@ pyyaml
 numpy
 langchain-huggingface
 sentence-transformers
+fastapi
+uvicorn
