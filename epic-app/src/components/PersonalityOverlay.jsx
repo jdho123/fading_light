@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import LiquidGlass from './LiquidGlass';
-import { personalityService } from '../services/personalityService';
 
 /**
  * Helper component for configuration sliders
@@ -57,7 +56,7 @@ const PersonalityOverlay = ({ type, description, icon, onClose, onSimulationStar
 
   // Simulation parameters state
   const [config, setConfig] = useState({
-    useFakeData: true, // NEW: Default to FAKE (Client requirement)
+    useFakeData: true, // Default to FAKE
     textToSpeech: false,
     globalReplenish: 50,
     globalInit: 600,
@@ -71,24 +70,21 @@ const PersonalityOverlay = ({ type, description, icon, onClose, onSimulationStar
   };
 
   /**
-   * Invokes the personality service and listens for the READY signal
+   * Directly initiates the simulation state, bypassing the old personalityService handshake.
    */
   const handleStart = async () => {
     setIsStarting(true);
-    setStartStatus("Connecting...");
+    setStartStatus("Initializing...");
 
-    await personalityService.startSimulation((data) => {
-      // Once server is ready, we pass the full config (including TTS & FAKE/REAL setting) to the app
-      if (data.sender === 'Server' && data.message === 'READY') {
-        onSimulationStart({ 
-          type, 
-          icon, 
-          config, 
-          status: 'Establishing Protocol...' 
-        });
-        return;
-      }
-      onSimulationStart(data);
+    // Simulate a brief system initialization delay for UX effect
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    // Directly trigger the app start. The App.jsx will handle the fakeSimulationService logic.
+    onSimulationStart({ 
+        type, 
+        icon, 
+        config, 
+        status: 'System Ready' 
     });
   };
 
@@ -202,7 +198,7 @@ const PersonalityOverlay = ({ type, description, icon, onClose, onSimulationStar
                   {/* DATA SOURCE TOGGLE (FAKE/REAL) */}
                   <ConfigToggle 
                     label="Data Source" 
-                    value={!config.useFakeData} // Visual logic: False=Fake(Off), True=Real(On) ? Or reverse. Let's make it explicit.
+                    value={!config.useFakeData} 
                     onChange={(isReal) => handleConfigChange('useFakeData', !isReal)}
                     activeLabel="REAL"
                     inactiveLabel="FAKE"
