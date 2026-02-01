@@ -59,13 +59,13 @@ async def select_agents(selection: AgentSelection):
 @app.get("/generate-turn")
 async def generate_turn():
     """
-    Triggers the engine to process a single turn (blocking).
-    If the round is over, it will trigger the next round initialization.
+    Triggers the engine to process an entire round (blocking).
+    All messages generated during the round are queued for polling via /get-message.
     """
     if not engine.is_running:
         raise HTTPException(status_code=400, detail="Simulation not initialized. Call /agents first.")
     
-    result = engine.generate_turn()
+    result = engine.generate_round()
     return result
 
 @app.get("/get-message")

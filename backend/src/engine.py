@@ -168,28 +168,40 @@ class SimulationEngine:
         random.shuffle(active_agents)
         self.pending_agents = active_agents
 
-    def generate_turn(self) -> Dict:
+    def generate_round(self) -> Dict:
         """
-        Processes a single agent's turn. 
-        If the round is over, it starts a new one first.
+        Processes an entire round of the simulation.
+        If the round hasn't started, it initializes it.
+        Then it loops until all agents have acted or the turn limit is reached.
         """
         if not self.is_running:
             return {"error": "Simulation not initialized or has ended."}
 
-        # If no agents left in queue, start new round
+        # 1. Start a new round if we aren't in one
         if not self.pending_agents:
             if self.round_num >= self.max_rounds:
                 return {"status": "simulation_ended"}
             self.start_new_round()
-            return {"status": "round_started", "round": self.round_num}
 
-        # Pop next agent
+        # 2. Process turns until the round is complete
+        # A round is complete when pending_agents is empty 
+        # (either because they all acted or the turn limit hit)
+        start_round = self.round_num
+        while self.pending_agents and self.round_num == start_round:
+            self._step_once()
+            
+        return {
+            "status": "round_completed",
+            "round": self.round_num
+        }
+
+    def _step_once(self):
+        """Internal helper to process a single agent's turn."""
+        if not self.pending_agents:
+            return
+
         agent = self.pending_agents.pop(0)
         
-        # If agent already locked in (not possible with current pop logic but good for safety)
-        if agent.agent_id in self.agents_done:
-            return self.generate_turn()
-
         self.current_time += 1
         self.turns_in_round += 1
         
@@ -209,20 +221,15 @@ class SimulationEngine:
             # If no action, it was dialogue. 
             # Dialogue agents remain in the pending list for next cycles until they act.
             # We put them at the end of the queue.
-            self.broadcast(agent.name, response_msg.content)
+            content = response_msg.content
+            if content:
+                self.broadcast(agent.name, content)
             self.pending_agents.append(agent)
 
         # Check for discussion turn limit
         if self.turns_in_round >= self.max_discussion_turns:
             self._push_message("SYSTEM", "Discussion limit reached. Round ending.")
-            self.pending_agents = [] # Clear queue to force next round
-
-        return {
-            "status": "success",
-            "agent": agent.name,
-            "action": "take" if action_taken else "speak",
-            "round": self.round_num
-        }
+            self.pending_agents = [] # Clear queue to force end of round
 
     def _process_take_action(self, agent: SimulatedAgent, response_message) -> bool:
         """Inspects for tool calls and updates state."""
