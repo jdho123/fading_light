@@ -5,6 +5,7 @@ FastAPI entry point for the Fading Light agent simulation.
 import os
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from src.engine import SimulationEngine
@@ -13,6 +14,15 @@ from src.engine import SimulationEngine
 load_dotenv()
 
 app = FastAPI(title="Fading Light API")
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # For development; refine for production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Initialize global engine instance
 # It loads defaults from config/agents.yaml automatically on init
