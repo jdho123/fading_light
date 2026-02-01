@@ -10,7 +10,9 @@ This module manages the lifecycle of the simulation, including:
 
 import time
 import yaml
-from typing import List, Dict
+import random
+import re
+from typing import List, Dict, Set
 from src.agent import SimulatedAgent
 
 class SimulationEngine:
@@ -33,6 +35,14 @@ class SimulationEngine:
         self.settings = self.config.get("settings", {})
         self.short_term_limit = self.settings.get("short_term_limit", 5)
         
+        # Load resources settings
+        self.res_config = self.config.get("resources", {})
+        self.global_resource = self.res_config.get("global_initial", 50)
+        self.max_discussion_turns = self.res_config.get("max_discussion_turns", 20)
+        
+        # Track Agent Resources
+        self.agent_resources: Dict[str, int] = {}
+        
         # Load scenario
         self.scenario = self.config.get("scenario", {})
         self.max_rounds = self.scenario.get("max_rounds", 5)
@@ -48,6 +58,8 @@ class SimulationEngine:
         """Creates Agent instances based on the configuration."""
         print("Initializing Agents...")
         scenario_text = self.scenario.get("initial_message", "Simulation Start.")
+        initial_agent_res = self.res_config.get("agent_initial", 50)
+        
         for agent_cfg in self.config["agents"]:
             agent = SimulatedAgent(
                 agent_id=agent_cfg["id"],
@@ -57,17 +69,13 @@ class SimulationEngine:
                 short_term_limit=self.short_term_limit
             )
             self.agents.append(agent)
-            print(f" - {agent.name} is ready.")
+            self.agent_resources[agent.agent_id] = initial_agent_res
+            print(f" - {agent.name} is ready. (Essence: {initial_agent_res})")
         print("-" * 50)
 
     def broadcast(self, sender_name: str, message: str):
         """
-        Sends a message to ALL agents (including the sender, for memory consistency, 
-        though usually the sender remembers their own speech via the 'memorize' node).
-        
-        Actually, in our design:
-        1. Sender 'memorizes' their own output in the 'respond' phase.
-        2. We only need to tell the *other* agents to 'listen'.
+        Sends a message to ALL agents (including the sender, for memory consistency).
         """
         print(f"\n[{sender_name}]: {message}")
         
@@ -75,33 +83,107 @@ class SimulationEngine:
             if agent.name != sender_name:
                 agent.listen(sender_name, message, self.current_time)
 
+    def _process_take_action(self, agent: SimulatedAgent, response: str) -> bool:
+        """
+        Parses the response for [TAKE: X] and updates resources.
+        Returns True if an action was taken, False otherwise.
+        """
+        match = re.search(r"\[TAKE:\s*(\d+)\]", response, re.IGNORECASE)
+        if match:
+            amount = int(match.group(1))
+            
+            # 1. Validate Available Global Resource
+            actual_taken = min(amount, self.global_resource)
+            
+            # 2. Update Global Pool
+            self.global_resource -= actual_taken
+            
+            # 3. Update Agent Pool
+            # (Optional: Cap at max, but for now let's just add it)
+            current_res = self.agent_resources[agent.agent_id]
+            self.agent_resources[agent.agent_id] = current_res + actual_taken
+            
+            # 4. Broadcast the Event
+            self.broadcast("SYSTEM", f"{agent.name} took {actual_taken} Essence. (Global Remaining: {self.global_resource})")
+            return True
+            
+        return False
+
     def start(self):
         """
         Starts the simulation loop.
         """
         print("\n=== STARTING SIMULATION ===\n")
         
-        # 1. Print Initial Scenario (Agents have it in system prompt)
+        # 1. Print Initial Scenario
         initial_msg = self.scenario.get("initial_message", "Simulation Start.")
         print(f"Scenario: {initial_msg}")
         
-        # 2. Main Loop
         round_num = 1
         while round_num <= self.max_rounds:
             print(f"\n--- Round {round_num} ---")
             
-            # Round Robin conversation
+            # A. Replenish Global Resource
+            replenish = self.res_config.get("global_replenish", 0)
+            self.global_resource += replenish
+            print(f"SYSTEM: Global Essence replenishes by {replenish}. Total: {self.global_resource}")
+
+            # B. Apply Decay to Agents
+            decay = self.res_config.get("agent_decay", 10)
+            print(f"SYSTEM: Living costs {decay} Essence per agent.")
             for agent in self.agents:
-                self.current_time += 1
-                
-                # Active Agent decides what to say
-                response = agent.respond(self.current_time)
-                
-                # Broadcast result
-                self.broadcast(agent.name, response)
-                
-                # Small delay for readability
-                time.sleep(1)
+                aid = agent.agent_id
+                if self.agent_resources[aid] > 0:
+                    self.agent_resources[aid] -= decay
+                    # Check Death
+                    if self.agent_resources[aid] <= 0:
+                        self.agent_resources[aid] = 0
+                        self.broadcast("SYSTEM", f"{agent.name} has faded away (0 Essence).")
+
+            # C. Discussion & Action Loop
+            # Active agents are those still alive
+            active_agents = [a for a in self.agents if self.agent_resources[a.agent_id] > 0]
+            
+            if not active_agents:
+                print("SYSTEM: All agents have faded. Simulation Over.")
+                break
+
+            # Shuffle order
+            random.shuffle(active_agents)
+            
+            # Track who has locked in their action for this round
+            # Set of agent_ids
+            agents_done: Set[str] = set()
+            
+            turns = 0
+            while len(agents_done) < len(active_agents) and turns < self.max_discussion_turns:
+                for agent in active_agents:
+                    if agent.agent_id in agents_done:
+                        continue
+                        
+                    self.current_time += 1
+                    turns += 1
+                    
+                    # Agent decides
+                    response = agent.respond(
+                        current_time=self.current_time,
+                        global_essence=self.global_resource,
+                        personal_essence=self.agent_resources[agent.agent_id]
+                    )
+                    
+                    # Broadcast speech
+                    # (We strip the [TAKE] tag for cleaner reading, or keep it? Let's keep it for transparency)
+                    self.broadcast(agent.name, response)
+                    
+                    # Check for Action Lock
+                    if self._process_take_action(agent, response):
+                        agents_done.add(agent.agent_id)
+                        
+                    time.sleep(1)
+            
+            # Force end of round if limit reached
+            if len(agents_done) < len(active_agents):
+                print("SYSTEM: Discussion time limit reached. Round ending.")
             
             round_num += 1
             
