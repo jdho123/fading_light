@@ -7,7 +7,7 @@ manage the cognitive cycle of an agent: Recall -> Generate -> Memorize.
 
 from typing import TypedDict, List
 from langgraph.graph import StateGraph, END
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_anthropic import ChatAnthropic
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.output_parsers import StrOutputParser
@@ -34,14 +34,19 @@ class AgentState(TypedDict):
 
 class SimulatedAgent:
     """
-    A simulated agent powered by Gemini and LangGraph.
+    A simulated agent powered by Claude and LangGraph.
 
     The agent maintains a distinct personality and memory. Its lifecycle is driven
     by a state graph that handles context retrieval, response generation, and memory storage.
     """
 
     def __init__(
-        self, agent_id: str, name: str, personality: str, short_term_limit: int = 5
+        self,
+        agent_id: str,
+        name: str,
+        personality: str,
+        scenario: str,
+        short_term_limit: int = 5,
     ):
         """
         Initialize the SimulatedAgent.
@@ -50,22 +55,24 @@ class SimulatedAgent:
             agent_id (str): A unique identifier for the agent.
             name (str): The display name of the agent.
             personality (str): A detailed description of the agent's personality and behavior.
+            scenario (str): The context/scenario description for the simulation.
             short_term_limit (int, optional): The max number of recent messages to remember. Defaults to 5.
 
         Raises:
-            ValueError: If `GOOGLE_API_KEY` is not set in the environment variables.
+            ValueError: If `ANTHROPIC_API_KEY` is not set in the environment variables.
         """
         self.agent_id = agent_id
         self.name = name
         self.personality = personality
+        self.scenario = scenario
 
         # Initialize LLM and Embeddings
-        api_key = os.getenv("GOOGLE_API_KEY")
+        api_key = os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
-            raise ValueError("GOOGLE_API_KEY not found in environment variables.")
+            raise ValueError("ANTHROPIC_API_KEY not found in environment variables.")
 
-        self.llm = ChatGoogleGenerativeAI(
-            model="gemini-3-flash-preview", google_api_key=api_key
+        self.llm = ChatAnthropic(
+            model="claude-3-5-sonnet-latest", api_key=api_key
         )
         # Use local embeddings to avoid API quotas
         self.embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
@@ -129,7 +136,7 @@ class SimulatedAgent:
 
     def _node_generate(self, state: AgentState):
         """
-        Graph Node: Generates the response using Gemini.
+        Graph Node: Generates the response using Claude.
 
         Constructs a prompt combining personality, current context, and memory,
         then invokes the LLM.
@@ -144,6 +151,9 @@ class SimulatedAgent:
         # Construct the System Prompt
         system_prompt = f"""
         You are {self.name}. 
+        
+        Scenario:
+        {self.scenario}
         
         Personality Profile:
         {self.personality}
@@ -171,7 +181,7 @@ class SimulatedAgent:
             f"{context_block}\n\nTASK: Generate a response to the recent conversation."
         )
 
-        # Call Gemini with Output Parser
+        # Call Claude with Output Parser
         messages = [
             SystemMessage(content=system_prompt),
             HumanMessage(content=user_input),

@@ -47,11 +47,13 @@ class SimulationEngine:
     def _initialize_agents(self):
         """Creates Agent instances based on the configuration."""
         print("Initializing Agents...")
+        scenario_text = self.scenario.get("initial_message", "Simulation Start.")
         for agent_cfg in self.config["agents"]:
             agent = SimulatedAgent(
                 agent_id=agent_cfg["id"],
                 name=agent_cfg["name"],
                 personality=agent_cfg["personality"],
+                scenario=scenario_text,
                 short_term_limit=self.short_term_limit
             )
             self.agents.append(agent)
@@ -79,9 +81,9 @@ class SimulationEngine:
         """
         print("\n=== STARTING SIMULATION ===\n")
         
-        # 1. Broadcast Initial Scenario
+        # 1. Print Initial Scenario (Agents have it in system prompt)
         initial_msg = self.scenario.get("initial_message", "Simulation Start.")
-        self.broadcast("SYSTEM", initial_msg)
+        print(f"Scenario: {initial_msg}")
         
         # 2. Main Loop
         round_num = 1

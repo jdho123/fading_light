@@ -21,8 +21,8 @@ def main():
     load_dotenv()
     
     # Check API Key
-    if not os.getenv("GOOGLE_API_KEY"):
-        print("ERROR: GOOGLE_API_KEY not found. Please create a .env file.")
+    if not os.getenv("ANTHROPIC_API_KEY"):
+        print("ERROR: ANTHROPIC_API_KEY not found. Please create a .env file.")
         return
 
     # Initialize and Start Engine
