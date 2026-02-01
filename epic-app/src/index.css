@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@layer utilities {
+  @keyframes shockwave {
+    0% {
+      transform: translate(-50%, -50%) scale(0.5);
+      opacity: 1;
+      border-width: 4px;
+    }
+    100% {
+      transform: translate(-50%, -50%) scale(15);
+      opacity: 0;
+      border-width: 6px;
+    }
+  }
+
+  .animate-shockwave {
+    animation: shockwave 1s cubic-bezier(0, 0, 0.2, 1) forwards;
+  }
+
+  /* Standard float animation for the crystal */
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes orbit {
+    from { transform: translate(-50%, -50%) rotate(0deg); }
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+  }
+
+  .animate-orbit {
+    animation: orbit linear infinite;
+  }
+
+  /* NEW: Counter-rotation to keep images upright */
+  @keyframes counter-orbit {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(-360deg); }
+  }
+
+  .animate-counter-orbit {
+    animation: counter-orbit linear infinite;
+  }
+}
