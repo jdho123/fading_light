@@ -10,10 +10,14 @@ import os
 
 
 @tool
-def take_essence(amount: int):
+def take_essence(amount: int, reason: str = ""):
     """
     Takes a specific amount of Essence from the global pool to add to your personal vitality.
     Call this tool when you have decided to ACT.
+    
+    Args:
+        amount (int): The amount of essence to take.
+        reason (str): A brief justification for your action (optional). This will be broadcast to others.
     """
     return amount
 
@@ -168,7 +172,7 @@ class SimulatedAgent:
 
         # Construct the System Prompt
         system_prompt = f"""
-        You are {self.name}. 
+        You are {self.name}.
         
         Scenario:
         {self.scenario}
@@ -189,27 +193,38 @@ class SimulatedAgent:
         
         Core Instructions:
         1. Stay in character.
-        2. Use the provided memory context to inform your response.
-        3. Respond naturally to the conversation flow.
-        4. Respond concisely (1-2 short statements max) as a person would speak, in a single unformatted string.
-        5. Just output speech, do not describe action or thoughts.
-        5. **DECISION PHASE:**
+        2. You are encouraged to interact before taking action.
+        3. You are encouraged to strategize with others to maximize your survival.
+        4. You must use the provided memory context to inform your response, if it exists.
+        5. Respond naturally to the conversation flow taking the responses of others into account.
+        6. Respond concisely (1-2 short statements max) as a person would speak, in a single unformatted string.
+        7. Just output what you would say and nothing else, do not output actions, thoughts, or additional descriptions!
+        8. **DECISION PHASE:**
            - If you wish to discuss, output text ONLY.
            - If you wish to ACT and secure essence, call the `take_essence` tool.
-           - Do NOT do both (e.g. do not output text and then call the tool).
+           - **IMPORTANT:** If you use the tool, you can provide a `reason` argument. This will be your LAST words for this round.
+           - Do NOT output separate text if you are calling the tool. Put your justification in the `reason` field.
            - Once you use the tool, your turn for this round is OVER.
            - You can take 0 to pass.
+        
+        YOU MUST FOLLOW THE ABOVE INSTRUCTIONS CAREFULLY. THIS IS NON-NEGOTIABLE.
         """
 
         # Construct Context Block
         context_block = ""
         if state["semantic_context"]:
-            context_block += "\nRELEVANT PAST MEMORIES:\n" + "\n".join(
-                state["semantic_context"]
+            context_block += (
+                "\nRELEVANT PAST MEMORIES:\n" + "\n".join(state["semantic_context"])
+                if state["semantic_context"]
+                else "No memories yet"
             )
 
         if state["history_context"]:
-            context_block += "\n\nRECENT CONVERSATION:\n" + state["history_context"]
+            context_block += (
+                "\n\nRECENT CONVERSATION:\n" + state["history_context"]
+                if state["history_context"]
+                else "No recent conversation yet"
+            )
 
         user_input = f"{context_block}\n\nTASK: Generate a response to the recent conversation. Decide if you will speak or ACT now."
 
@@ -236,7 +251,10 @@ class SimulatedAgent:
             # It was an action
             args = msg.tool_calls[0]["args"]
             amount = args.get("amount", 0)
-            content_to_save = f"Me: [ACTION] I decided to take {amount} essence."
+            reason = args.get("reason", "")
+            content_to_save = (
+                f"Me: [ACTION] I decided to take {amount} essence. Reason: {reason}"
+            )
         else:
             # It was dialogue
             content_to_save = f"Me: {msg.content}"

@@ -94,6 +94,7 @@ class SimulationEngine:
                 if tool_call['name'] == 'take_essence':
                     args = tool_call['args']
                     amount = args.get('amount', 0)
+                    reason = args.get('reason', "")
                     
                     # 1. Validate Available Global Resource
                     actual_taken = min(amount, self.global_resource)
@@ -106,7 +107,11 @@ class SimulationEngine:
                     self.agent_resources[agent.agent_id] = current_res + actual_taken
                     
                     # 4. Broadcast the Event
-                    self.broadcast("SYSTEM", f"{agent.name} took {actual_taken} Essence. (Global Remaining: {self.global_resource})")
+                    broadcast_msg = f"{agent.name} took {actual_taken} Essence. (Global Remaining: {self.global_resource})"
+                    if reason:
+                        broadcast_msg += f"\n   Reason: \"{reason}\""
+                    
+                    self.broadcast("SYSTEM", broadcast_msg)
                     return True
             
         return False
