@@ -9,46 +9,28 @@ import { fakeSimulationService } from './services/fakeSimulationService';
 // --- ICON IMPORTS ---
 import intjIcon from './assets/icons/INTJ.svg';
 import intpIcon from './assets/icons/INTP.svg';
-import entjIcon from './assets/icons/ENTJ.svg';
-import entpIcon from './assets/icons/ENTP.svg';
 import infjIcon from './assets/icons/INFJ.svg';
 import infpIcon from './assets/icons/INFP.svg';
-import enfjIcon from './assets/icons/ENFJ.svg';
-import enfpIcon from './assets/icons/ENFP.svg';
 import istjIcon from './assets/icons/ISTJ.svg';
 import isfjIcon from './assets/icons/ISFJ.svg';
-import estjIcon from './assets/icons/ESTJ.svg';
-import esfjIcon from './assets/icons/ESFJ.svg';
 import istpIcon from './assets/icons/ISTP.svg';
 import isfpIcon from './assets/icons/ISFP.svg';
-import estpIcon from './assets/icons/ESTP.svg';
-import esfpIcon from './assets/icons/ESFP.svg';
 
 // --- CONSTANTS ---
 const PERSONALITY_TYPES = [
-  'INTJ', 'INTP', 'ENTJ', 'ENTP',
-  'INFJ', 'INFP', 'ENFJ', 'ENFP',
-  'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ',
-  'ISTP', 'ISFP', 'ESTP', 'ESFP'
+  'INTJ', 'INTP', 'INFJ', 'INFP',
+  'ISTJ', 'ISFJ', 'ISTP', 'ISFP'
 ];
 
 const ICONS = {
-  INTJ: intjIcon, INTP: intpIcon, ENTJ: entjIcon, ENTP: entpIcon,
-  INFJ: infjIcon, INFP: infpIcon, ENFJ: enfjIcon, ENFP: enfpIcon,
-  ISTJ: istjIcon, ISFJ: isfjIcon, ESTJ: estjIcon, ESFJ: esfjIcon,
-  ISTP: istpIcon, ISFP: isfpIcon, ESTP: estpIcon, ESFP: esfpIcon,
+  INTJ: intjIcon, INTP: intpIcon, 
+  INFJ: infjIcon, INFP: infpIcon,
+  ISTJ: istjIcon, ISFJ: isfjIcon,
+  ISTP: istpIcon, ISFP: isfpIcon,
 };
 
 //
 const VOICE_ID_MAP = {
-  ENTJ: "upefjlNvhzs6Bcw8VH6r",
-  ENFJ: "E7Sex9zr9pSdBwMmCFf8",
-  ESFJ: "detYsvmHyJYEoGhsaCV2",
-  ESTJ: "C6wx0jKQZOfbhGCMLxln",
-  ENTP: "rvh70NPK87mkgsNu0qCU",
-  ENFP: "3zbDWL5dkaYKTYEwWAxL",
-  ESFP: "N81i2PTFujmPrv7rr7eq",
-  ESTP: "mbsOxFgNBAnyYulmKarO",
   INTP: "iiXMKuEphYiFcjqxF9hT",
   INFP: "TAoMcknZ76bE7VZNBnKp",
   ISFP: "nBooZyQ3XaAtDHkVrfra",

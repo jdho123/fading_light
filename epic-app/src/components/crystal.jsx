@@ -5,55 +5,34 @@ import PersonalityCategories from './PersonalityCategories';
 
 import intjIcon from '../assets/icons/INTJ.svg';
 import intpIcon from '../assets/icons/INTP.svg';
-import entjIcon from '../assets/icons/ENTJ.svg';
-import entpIcon from '../assets/icons/ENTP.svg';
-
 import infjIcon from '../assets/icons/INFJ.svg';
 import infpIcon from '../assets/icons/INFP.svg';
-import enfjIcon from '../assets/icons/ENFJ.svg';
-import enfpIcon from '../assets/icons/ENFP.svg';
-
 import istjIcon from '../assets/icons/ISTJ.svg';
 import isfjIcon from '../assets/icons/ISFJ.svg';
-import estjIcon from '../assets/icons/ESTJ.svg';
-import esfjIcon from '../assets/icons/ESFJ.svg';
-
 import istpIcon from '../assets/icons/ISTP.svg';
 import isfpIcon from '../assets/icons/ISFP.svg';
-import estpIcon from '../assets/icons/ESTP.svg';
-import esfpIcon from '../assets/icons/ESFP.svg';
 
 const PERSONALITY_TYPES = [
-  'INTJ', 'INTP', 'ENTJ', 'ENTP',
-  'INFJ', 'INFP', 'ENFJ', 'ENFP',
-  'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ',
-  'ISTP', 'ISFP', 'ESTP', 'ESFP'
+  'INTJ', 'INTP', 'INFJ', 'INFP',
+  'ISTJ', 'ISFJ', 'ISTP', 'ISFP'
 ];
 
 const ICONS = {
-  INTJ: intjIcon, INTP: intpIcon, ENTJ: entjIcon, ENTP: entpIcon,
-  INFJ: infjIcon, INFP: infpIcon, ENFJ: enfjIcon, ENFP: enfpIcon,
-  ISTJ: istjIcon, ISFJ: isfjIcon, ESTJ: estjIcon, ESFJ: esfjIcon,
-  ISTP: istpIcon, ISFP: isfpIcon, ESTP: estpIcon, ESFP: esfpIcon,
+  INTJ: intjIcon, INTP: intpIcon,
+  INFJ: infjIcon, INFP: infpIcon,
+  ISTJ: istjIcon, ISFJ: isfjIcon,
+  ISTP: istpIcon, ISFP: isfpIcon,
 };
 
 const PERSONALITY_DESCRIPTIONS = {
   INTJ: "Imaginative and strategic thinkers, with a plan for everything.",
   INTP: "Innovative inventors with an unquenchable thirst for knowledge.",
-  ENTJ: "Bold, imaginative and strong-willed leaders, always finding a way - or making one.",
-  ENTP: "Smart and curious thinkers who cannot resist an intellectual challenge.",
   INFJ: "Quiet and mystical, yet very inspiring and tireless idealists.",
   INFP: "Poetic, kind and altruistic people, always eager to help a good cause.",
-  ENFJ: "Charismatic and inspiring leaders, able to mesmerize their listeners.",
-  ENFP: "Enthusiastic, creative and sociable free spirits, who can always find a reason to smile.",
   ISTJ: "Practical and fact-minded individuals, whose reliability cannot be doubted.",
   ISFJ: "Very dedicated and warm protectors, always ready to defend their loved ones.",
-  ESTJ: "Excellent administrators, unsurpassed at managing things - or people.",
-  ESFJ: "Extraordinarily caring, social and popular people, always eager to help.",
   ISTP: "Bold and practical experimenters, masters of all kinds of tools.",
   ISFP: "Flexible and charming artists, always ready to explore and experience something new.",
-  ESTP: "Smart, energetic and very perceptive people, who truly enjoy living on the edge.",
-  ESFP: "Spontaneous, energetic and enthusiastic people - life is never boring around them."
 };
 
 const Crystal = ({ onSimulationStart }) => {
@@ -137,7 +116,7 @@ const Crystal = ({ onSimulationStart }) => {
             isCracked={isCracked} 
             radius={300} 
             speed={64} 
-            delay={index * 4}
+            delay={index * 8}
             onOrbHover={() => handleOrbHover(type)}
             onOrbLeave={handleOrbLeave}
             onOrbClick={() => handleOrbClick(type)}
