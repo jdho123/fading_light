@@ -97,6 +97,7 @@ function App() {
   const [activeSimulation, setActiveSimulation] = useState(null);
   const [messageQueue, setMessageQueue] = useState([]);
   const [displayedMessage, setDisplayedMessage] = useState(null);
+  const [messageHistory, setMessageHistory] = useState([]);
   
   // NEW: Controls the flow of the simulation rounds
   const [isRoundActive, setIsRoundActive] = useState(false);
@@ -106,6 +107,8 @@ function App() {
 
   // NEW: Track the current round number
   const [roundCount, setRoundCount] = useState(1);
+
+  const scrollRef = useRef(null);
 
   /**
    * INGESTION HANDLER
@@ -123,54 +126,39 @@ function App() {
 
   /**
    * TRIGGER NEXT ROUND
-   * Handles both Fake and Real data sources based on toggle config.
    */
   const handleNextRound = async () => {
     setIsRoundActive(true);
-    setHasServerFinished(false); // Reset signal
+    setHasServerFinished(false); 
     
-    // Check configuration from the active simulation state
-    // Default to TRUE (Fake) if config is missing
     const useFakeData = activeSimulation?.config?.useFakeData ?? true;
 
     if (useFakeData) {
-      console.log(`🎭 [MODE] FAKE Data Selected via Settings. Starting Round ${roundCount}.`);
-      
-      // Initialize and Start Fake Service
-      // Note: In a real app, you might not want to re-initialize every time, 
-      // but the fake service handles state reset internally if needed or just continues.
-      // We only call initialize if it's the very first round or if we want a hard reset.
-      // For now, we'll just call startNextRound() effectively.
       if (roundCount === 1) {
         await fakeSimulationService.initializeSimulation();
       }
       await fakeSimulationService.startNextRound();
 
-      // Start Polling Loop
       const pollLoop = async () => {
         try {
           const msg = await fakeSimulationService.pollMessage();
 
           if (msg.type === 'turn_over') {
-            console.log("🏁 [FAKE] Round Complete (Server Side)");
-            setHasServerFinished(true); // Signal that no more messages are coming
+            setHasServerFinished(true); 
             return; 
           }
           
           if (msg.type === 'simulation_ended') {
-            console.log("🛑 [FAKE] Simulation Ended");
             setHasServerFinished(true);
             return;
           }
 
-          // Map Fake Service format to App format
           handleDataUpdate({
             type: msg.type === 'SYSTEM' ? 'Server' : msg.type,
             message: msg.content,
             status: msg.sender === 'SYSTEM' ? 'System Alert' : 'Incoming Transmission'
           });
 
-          // Continue polling with a small delay to fill the queue
           setTimeout(pollLoop, 200); 
 
         } catch (error) {
@@ -178,12 +166,7 @@ function App() {
         }
       };
 
-      // Kick off the poller
       pollLoop();
-
-    } else {
-      console.log(`📡 [MODE] REAL API Selected. Requesting Round ${roundCount}...`);
-      // In the future: await fetch('/api/next-round');
     }
   };
 
@@ -191,20 +174,13 @@ function App() {
    * QUEUE WATCHER & ROUND END DETECTOR
    */
   useEffect(() => {
-    // 1. Detect End of Round:
-    // If round is active + server is done + queue is empty + nothing on screen...
     if (isRoundActive && hasServerFinished && messageQueue.length === 0 && !displayedMessage) {
-      console.log("🎬 [APP] Round Presentation Finished. Showing Button.");
       setIsRoundActive(false);
       setHasServerFinished(false);
-      
-      // Increment Round Count for the next button display
       setRoundCount(prev => prev + 1);
       return;
     }
 
-    // 2. Process Next Message:
-    // If round is active + nothing on screen + queue has items...
     if (isRoundActive && !displayedMessage && messageQueue.length > 0) {
       const nextData = messageQueue[0];
       setDisplayedMessage(nextData);
@@ -224,27 +200,22 @@ function App() {
         status: displayedMessage.status || prev?.status
       }));
 
+      setMessageHistory(prev => [...prev, displayedMessage]);
+
       let isCancelled = false;
 
       const runStageSequence = async () => {
         const tasks = [];
-
-        // 1. Minimum Duration (3s)
         tasks.push(new Promise(resolve => setTimeout(resolve, 3000)));
 
-        // 2. TTS (if enabled)
         if (activeSimulation?.config?.textToSpeech) {
           const voiceId = VOICE_ID_MAP[displayedMessage.type];
           if (voiceId) {
             tasks.push(playTTS(displayedMessage.message, voiceId));
-          } else {
-            console.warn(`No voice ID mapped for type: ${displayedMessage.type}`);
           }
         }
 
         await Promise.all(tasks);
-
-        // 3. Grace Period
         await new Promise(resolve => setTimeout(resolve, 1000));
 
         if (!isCancelled) {
@@ -257,98 +228,116 @@ function App() {
     }
   }, [displayedMessage]);
 
+  // Auto-scroll chat
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messageHistory]);
+
   return (
     <main className="relative flex items-center justify-center min-h-screen bg-slate-950 overflow-hidden text-white">
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)]"></div>
       
       {!activeSimulation ? (
-        /* MODE 1: SELECTION */
         <Crystal onSimulationStart={handleDataUpdate} />
       ) : (
-        /* MODE 2: DASHBOARD */
         <div className="relative w-full h-full flex animate-in fade-in duration-1000">
           
-          {/* LEFT: ORBIT VISUALIZER */}
+          {/* LEFT: CRYSTAL VISUALIZER */}
           <div className="w-1/2 relative min-h-screen flex items-center justify-center border-r border-white/5">
-             {PERSONALITY_TYPES.map((type, index) => (
-               <OrbitingCircle2 
-                 key={type}
-                 personality={type} 
-                 icon={ICONS[type]} 
-                 index={index}
-                 totalItems={PERSONALITY_TYPES.length}
-                 speed={40} 
-                 // Only highlight if round is active AND type matches
-                 isHighlighted={isRoundActive && type === activeSimulation.type} 
-               />
-             ))}
-             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-yellow-500/5 blur-[120px] rounded-full"></div>
+             {/* We use the Crystal component visuals directly here but simplified */}
+             <div className="relative -translate-x-32 scale-75">
+                {PERSONALITY_TYPES.map((type, index) => (
+                  <OrbitingCircle2 
+                    key={type}
+                    personality={type} 
+                    icon={ICONS[type]} 
+                    index={index}
+                    totalItems={PERSONALITY_TYPES.length}
+                    speed={64} 
+                    isHighlighted={isRoundActive && type === activeSimulation.type} 
+                  />
+                ))}
+                
+                {/* Crystal Graphic Core */}
+                <div className="relative w-24 h-40 animate-float opacity-80">
+                    <div className="absolute inset-0 bg-gradient-to-b from-cyan-300 via-cyan-500 to-blue-900 -translate-x-4 -rotate-6" style={{ clipPath: "polygon(0% 50%, 50% 0%, 50% 100%)" }}></div>
+                    <div className="absolute inset-0 bg-gradient-to-b from-cyan-300 via-cyan-500 to-blue-900 translate-x-4 rotate-6" style={{ clipPath: "polygon(50% 0%, 100% 50%, 50% 100%)" }}></div>
+                    <div className="absolute inset-0 bg-cyan-400 blur-3xl opacity-20"></div>
+                </div>
+             </div>
           </div>
           
-          {/* RIGHT: DATA FEED */}
-          <div className="w-1/2 flex flex-col justify-center p-20 z-50">
-             <div className="mb-2 text-yellow-500 font-mono tracking-[0.3em] uppercase text-xs font-bold animate-pulse">
-               {isRoundActive ? (activeSimulation.status || 'Simulation Active') : 'Standby Mode'}
-             </div>
-
-             <h1 className="text-8xl font-bold tracking-tighter mb-8 transition-all duration-700">
-                {isRoundActive ? activeSimulation.type : 'Ready'}
-             </h1>
-             
-             {/* CONDITIONAL RENDER: Show Message Box OR Start Button */}
-             {isRoundActive ? (
-                /* ACTIVE MESSAGE VIEW */
-                activeSimulation.message && (
-                 <div 
-                   key={activeSimulation.message} 
-                   className="p-8 bg-white/5 border border-white/10 rounded-3xl animate-in fade-in slide-in-from-bottom-4 duration-700 shadow-2xl"
-                 >
-                    <p className="text-cyan-400 font-mono text-[10px] uppercase tracking-widest mb-4 opacity-50">
-                      Incoming Transmission:
-                    </p>
-                    <p className="text-white text-3xl font-light italic leading-relaxed">
-                      "{activeSimulation.message}"
-                    </p>
-                    
-                    <div className="mt-8 h-1 w-full bg-white/5 rounded-full overflow-hidden">
-                      <div 
-                          className="h-full bg-cyan-500/50 animate-progress-fast" 
-                          style={{ animationDuration: '3s' }} 
-                      />
+          {/* RIGHT: CHAT WINDOW */}
+          <div className="w-1/2 flex flex-col h-screen z-50 p-10">
+             <div className="flex justify-between items-center mb-6">
+                <div>
+                    <div className="text-yellow-500 font-mono tracking-[0.3em] uppercase text-xs font-bold animate-pulse">
+                      {isRoundActive ? (activeSimulation.status || 'Simulation Active') : 'Standby Mode'}
                     </div>
-                 </div>
-               )
-             ) : (
-                /* WAITING / START ROUND BUTTON */
-                <div className="p-12 bg-white/5 border border-white/10 rounded-3xl flex flex-col items-center text-center animate-in zoom-in-95 duration-500">
-                    <div className="text-cyan-400 font-mono text-xs uppercase tracking-widest mb-4">
-                        Simulation Protocol Loaded
-                    </div>
-                    <p className="text-white/60 text-lg mb-8 max-w-sm">
-                        The agents are initialized and awaiting the round signal. Press below to trigger the scenario.
-                    </p>
+                    <h1 className="text-4xl font-bold tracking-tighter">Transmission Log</h1>
+                </div>
+                
+                {!isRoundActive && (
                     <button 
                         onClick={handleNextRound}
-                        className="px-12 py-5 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-lg rounded-full shadow-[0_0_40px_rgba(6,182,212,0.4)] hover:scale-105 transition-all uppercase tracking-wider"
+                        className="px-8 py-3 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm rounded-full shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all uppercase tracking-wider"
                     >
-                        Initialize Round {roundCount}
+                        Start Round {roundCount}
                     </button>
-                </div>
-             )}
-             
-             <button 
-               onClick={() => {
-                 setActiveSimulation(null);
-                 setMessageQueue([]);
-                 setDisplayedMessage(null);
-                 setIsRoundActive(false); // Reset round state
-                 setHasServerFinished(false);
-                 setRoundCount(1); // Reset counter
-               }}
-               className="mt-12 px-10 py-4 rounded-full border border-white/10 text-white/40 hover:text-white hover:border-white/30 transition-all w-fit uppercase tracking-widest text-[10px] font-bold"
+                )}
+             </div>
+
+             <div 
+               ref={scrollRef}
+               className="flex-1 overflow-y-auto pr-4 space-y-4 scrollbar-hide"
+               style={{ scrollBehavior: 'smooth' }}
              >
-               Terminate Protocol
-             </button>
+                {messageHistory.length === 0 && (
+                    <div className="h-full flex flex-col items-center justify-center text-center opacity-30">
+                        <div className="w-12 h-12 border-2 border-dashed border-white/20 rounded-full mb-4 animate-spin-slow"></div>
+                        <p className="font-mono text-xs uppercase tracking-widest">Awaiting Data Streams...</p>
+                    </div>
+                )}
+                
+                {messageHistory.map((msg, i) => (
+                    <div 
+                      key={i}
+                      className={`p-5 rounded-2xl border transition-all duration-500 animate-in slide-in-from-right-4
+                                 ${msg === displayedMessage ? 'bg-cyan-500/10 border-cyan-500/50 shadow-[0_0_20px_rgba(6,182,212,0.1)]' : 'bg-white/5 border-white/10 opacity-60'}`}
+                    >
+                        <div className="flex justify-between items-start mb-2">
+                            <span className="text-cyan-400 font-mono text-[10px] uppercase tracking-widest font-bold">
+                                {msg.type}
+                            </span>
+                            <span className="text-white/20 font-mono text-[8px]">
+                                {new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                            </span>
+                        </div>
+                        <p className={`text-lg leading-relaxed ${msg === displayedMessage ? 'text-white' : 'text-white/70'}`}>
+                            "{msg.message}"
+                        </p>
+                    </div>
+                ))}
+             </div>
+             
+             <div className="mt-6 flex gap-4">
+                <button 
+                  onClick={() => {
+                    setActiveSimulation(null);
+                    setMessageQueue([]);
+                    setDisplayedMessage(null);
+                    setMessageHistory([]);
+                    setIsRoundActive(false); 
+                    setHasServerFinished(false);
+                    setRoundCount(1); 
+                  }}
+                  className="px-6 py-3 rounded-full border border-white/10 text-white/40 hover:text-white hover:border-white/30 transition-all uppercase tracking-widest text-[10px] font-bold"
+                >
+                  Reset Protocol
+                </button>
+             </div>
           </div>
         </div>
       )}

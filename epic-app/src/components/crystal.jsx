@@ -1,9 +1,10 @@
 import React, { useState, useRef } from 'react';
 import OrbitingCircle from './OrbitingCircle';
-import PersonalityOverlay from './PersonalityOverlay';
 import PersonalityCategories from './PersonalityCategories';
+import { personalityService } from '../services/personalityService';
 
 import intjIcon from '../assets/icons/INTJ.svg';
+// ... (rest of icon imports kept for now to avoid breaking constants)
 import intpIcon from '../assets/icons/INTP.svg';
 import infjIcon from '../assets/icons/INFJ.svg';
 import infpIcon from '../assets/icons/INFP.svg';
@@ -40,9 +41,8 @@ const Crystal = ({ onSimulationStart }) => {
   const [isCracked, setIsCracked] = useState(false);
   
   const [hoveredOrbId, setHoveredOrbId] = useState(null);
-  const [selectedPersonality, setSelectedPersonality] = useState(null); 
-  const [confirmedPersonality, setConfirmedPersonality] = useState(null);
   const [isInteractionLocked, setIsInteractionLocked] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
   
   const leaveTimeoutRef = useRef(null);
   const lastShockwaveTimeRef = useRef(0);
@@ -59,16 +59,49 @@ const Crystal = ({ onSimulationStart }) => {
     }, 1000);
   };
 
+  const handleStart = async () => {
+    if (isStarting) return;
+    setIsStarting(true);
+    setIsInteractionLocked(true);
+
+    const defaultConfig = {
+        useFakeData: true,
+        textToSpeech: false,
+        globalReplenish: 50,
+        globalInit: 600,
+        agentMax: 100,
+        agentInit: 100,
+        agentDecay: 10
+    };
+
+    await personalityService.startSimulation((data) => {
+      if (data.sender === 'Server' && data.message === 'READY') {
+        onSimulationStart({ 
+          type: 'SYSTEM', 
+          icon: null, 
+          config: defaultConfig, 
+          status: 'Establishing Protocol...' 
+        });
+        return;
+      }
+      onSimulationStart(data);
+    });
+  };
+
   const handleCrackToggle = () => {
+    if (isInteractionLocked) return;
+
     if (!isCracked) {
       setIsInteractionLocked(true);
       setTimeout(() => setIsInteractionLocked(false), 300);
+      setIsCracked(true);
+    } else {
+      handleStart();
     }
-    setIsCracked(!isCracked);
   };
 
   const handleOrbHover = (id) => {
-    if (isInteractionLocked || selectedPersonality) return;
+    if (isInteractionLocked) return;
     if (leaveTimeoutRef.current) {
       clearTimeout(leaveTimeoutRef.current);
       leaveTimeoutRef.current = null;
@@ -82,28 +115,11 @@ const Crystal = ({ onSimulationStart }) => {
     }, 300);
   };
 
-  const handleOrbClick = (id) => {
-    if (isInteractionLocked) return;
-    setSelectedPersonality(id);
-    setHoveredOrbId(null);
-  };
-
   return (
     <>
-      {selectedPersonality && (
-        <PersonalityOverlay 
-          type={selectedPersonality}
-          description={PERSONALITY_DESCRIPTIONS[selectedPersonality]}
-          icon={ICONS[selectedPersonality]}
-          onClose={() => setSelectedPersonality(null)}
-          onSelect={(type) => setConfirmedPersonality(type)}
-          onSimulationStart={onSimulationStart}
-        />
-      )}
-
       <div className={`relative flex items-center justify-center transition-all duration-1000 ease-in-out
                        ${isCracked ? '-translate-x-64' : 'translate-x-0'}
-                       ${selectedPersonality ? 'pointer-events-none blur-sm brightness-50 scale-95' : 'opacity-100'}`}>
+                       ${isStarting ? 'pointer-events-none blur-sm brightness-50 scale-95' : 'opacity-100'}`}>
         
         {/* --- MODIFIED: Rotating Category Text --- */}
         {/* Now accepts isVisible={isCracked} to sync with animation */}
@@ -120,7 +136,7 @@ const Crystal = ({ onSimulationStart }) => {
             delay={index * 8}
             onOrbHover={() => handleOrbHover(type)}
             onOrbLeave={handleOrbLeave}
-            onOrbClick={() => handleOrbClick(type)}
+            onOrbClick={() => {}} // Removed functionality
             isHovered={hoveredOrbId === type}
             isDimmed={hoveredOrbId !== null && hoveredOrbId !== type}
           />
@@ -167,10 +183,19 @@ const Crystal = ({ onSimulationStart }) => {
           </div>
           <div className={`absolute -bottom-16 left-1/2 -translate-x-1/2 h-4 bg-red-600/20 blur-xl rounded-full transition-all duration-700 
                           group-hover:bg-cyan-500/40 ${isCracked ? 'w-32 opacity-10' : 'w-16'}`}></div>
+          
+          {/* Label indicating it can be clicked to start when cracked */}
+          {isCracked && !isStarting && (
+            <div className="absolute top-48 left-1/2 -translate-x-1/2 whitespace-nowrap text-cyan-400 font-mono text-[10px] tracking-[0.3em] uppercase animate-pulse">
+                Click to Initialize
+            </div>
+          )}
         </div>
       </div>
     </>
   );
 };
+
+export default Crystal;
 
 export default Crystal;
