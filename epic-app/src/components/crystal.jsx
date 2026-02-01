@@ -101,7 +101,8 @@ const Crystal = ({ onSimulationStart }) => {
         />
       )}
 
-      <div className={`relative flex items-center justify-center transition-all duration-700 ease-in-out -translate-x-64
+      <div className={`relative flex items-center justify-center transition-all duration-1000 ease-in-out
+                       ${isCracked ? '-translate-x-64' : 'translate-x-0'}
                        ${selectedPersonality ? 'pointer-events-none blur-sm brightness-50 scale-95' : 'opacity-100'}`}>
         
         {/* --- MODIFIED: Rotating Category Text --- */}
