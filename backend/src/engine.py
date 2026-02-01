@@ -37,6 +37,7 @@ class SimulationEngine:
         self.agents_done: Set[str] = set()
         self.turns_in_round = 0
         self.is_running = False
+        self.is_generating = False
 
         # Load initial defaults
         self.reset_to_defaults()
@@ -64,6 +65,20 @@ class SimulationEngine:
         self.round_num = 0
         self.current_time = 0
         self.is_running = False
+        self.is_generating = False
+
+    def run_round_background(self):
+        """
+        A wrapper meant to be called in a background thread.
+        Sets the generation flag and ensures it is reset.
+        """
+        try:
+            self.is_generating = True
+            self.generate_round()
+        except Exception as e:
+            self._push_message("SYSTEM", f"CRITICAL ERROR in background task: {e}")
+        finally:
+            self.is_generating = False
 
     def update_settings(self, new_settings: Dict):
         """Updates specific resource or scenario settings."""

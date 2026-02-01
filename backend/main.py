@@ -4,7 +4,7 @@ FastAPI entry point for the Fading Light agent simulation.
 
 import os
 from typing import List, Optional
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from src.engine import SimulationEngine
@@ -57,16 +57,21 @@ async def select_agents(selection: AgentSelection):
     }
 
 @app.get("/generate-turn")
-async def generate_turn():
+async def generate_turn(background_tasks: BackgroundTasks):
     """
-    Triggers the engine to process an entire round (blocking).
-    All messages generated during the round are queued for polling via /get-message.
+    Triggers the engine to process an entire round in the background.
+    Returns immediately with a status. Use /get-message to poll for results.
     """
     if not engine.is_running:
         raise HTTPException(status_code=400, detail="Simulation not initialized. Call /agents first.")
     
-    result = engine.generate_round()
-    return result
+    if engine.is_generating:
+        return {"status": "already_processing", "message": "A round is already being generated."}
+    
+    # Run the round in the background
+    background_tasks.add_task(engine.run_round_background)
+    
+    return {"status": "started", "message": "Round generation started in background."}
 
 @app.get("/get-message")
 async def get_message():
