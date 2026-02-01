@@ -1,19 +1,20 @@
-"""
-Core agent logic for the Simulated Agent.
-
-This module defines the `SimulatedAgent` class, which uses a LangGraph workflow to
-manage the cognitive cycle of an agent: Recall -> Generate -> Memorize.
-"""
-
-from typing import TypedDict, List
+from typing import TypedDict, List, Any
 from langgraph.graph import StateGraph, END
 from langchain_anthropic import ChatAnthropic
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.messages import SystemMessage, HumanMessage, BaseMessage
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.tools import tool
 from src.memory import AgentMemory
 import os
 
+@tool
+def take_essence(amount: int):
+    """
+    Takes a specific amount of Essence from the global pool to add to your personal vitality.
+    Call this tool when you have decided to ACT.
+    """
+    return amount
 
 class AgentState(TypedDict):
     """
@@ -23,7 +24,7 @@ class AgentState(TypedDict):
         current_time (int): The current simulation time tick.
         history_context (str): Retrieved short-term conversation history.
         semantic_context (List[str]): Retrieved relevant long-term memories.
-        response (str): The generated response text.
+        response (Any): The generated response (AIMessage).
         global_essence (int): The amount of shared resource remaining.
         personal_essence (int): The agent's current vitality.
     """
@@ -31,7 +32,7 @@ class AgentState(TypedDict):
     current_time: int
     history_context: str
     semantic_context: List[str]
-    response: str
+    response: Any
     global_essence: int
     personal_essence: int
 
@@ -78,6 +79,8 @@ class SimulatedAgent:
         self.llm = ChatAnthropic(
             model="claude-3-5-sonnet-latest", api_key=api_key
         )
+        self.llm_with_tools = self.llm.bind_tools([take_essence])
+
         # Use local embeddings to avoid API quotas
         self.embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
@@ -188,12 +191,12 @@ class SimulatedAgent:
         1. Stay in character.
         2. Use the provided memory context to inform your response.
         3. Respond naturally to the conversation flow.
-        4. **DECISION PHASE:** You must decide whether to continue discussing or to TAKE Essence.
-           - If you want to discuss/persuade, output normal text.
-           - If you want to ACT and secure essence, end your response with `[TAKE: X]` where X is the amount.
-           - Once you `[TAKE]`, your turn for this round is OVER.
-           - You can `[TAKE: 0]` to pass/volunteer to not eat.
-        5. Output ONLY the text of your response.
+        4. **DECISION PHASE:**
+           - If you wish to discuss, output text ONLY.
+           - If you wish to ACT and secure essence, call the `take_essence` tool.
+           - Do NOT do both (e.g. do not output text and then call the tool).
+           - Once you use the tool, your turn for this round is OVER.
+           - You can take 0 to pass.
         """
 
         # Construct Context Block
@@ -207,7 +210,7 @@ class SimulatedAgent:
             context_block += "\n\nRECENT CONVERSATION:\n" + state["history_context"]
 
         user_input = (
-            f"{context_block}\n\nTASK: Generate a response to the recent conversation. Decide if you will [TAKE: X] now."
+            f"{context_block}\n\nTASK: Generate a response to the recent conversation. Decide if you will speak or ACT now."
         )
 
         # Call Claude with Output Parser
@@ -216,27 +219,29 @@ class SimulatedAgent:
             HumanMessage(content=user_input),
         ]
 
-        # Use chain with StrOutputParser
-        chain = self.llm | StrOutputParser()
-        response_text = chain.invoke(messages)
+        # Invoke LLM with tools (returns AIMessage)
+        response_msg = self.llm_with_tools.invoke(messages)
         
-        return {"response": response_text}
+        return {"response": response_msg}
 
     def _node_memorize(self, state: AgentState):
         """
         Graph Node: Saves the interaction to memory.
-
-        Stores ONLY the agent's response into the memory system.
-        (Incoming messages are handled by `listen`).
-
-        Args:
-            state (AgentState): The current state.
-
-        Returns:
-            AgentState: The state.
         """
-        # Save the Agent's response
-        self.memory.add_interaction(f"Me: {state['response']}", state["current_time"])
+        msg = state['response']
+        
+        # Determine what to save based on whether it was text or tool
+        content_to_save = ""
+        if msg.tool_calls:
+            # It was an action
+            args = msg.tool_calls[0]['args']
+            amount = args.get('amount', 0)
+            content_to_save = f"Me: [ACTION] I decided to take {amount} essence."
+        else:
+            # It was dialogue
+            content_to_save = f"Me: {msg.content}"
+
+        self.memory.add_interaction(content_to_save, state["current_time"])
 
         return state
 
@@ -255,7 +260,7 @@ class SimulatedAgent:
         """
         self.memory.add_interaction(f"{sender}: {message}", current_time)
 
-    def respond(self, current_time: int, global_essence: int, personal_essence: int) -> str:
+    def respond(self, current_time: int, global_essence: int, personal_essence: int) -> Any:
         """
         Triggers the agent to deliberate and generate a response based on
         current memory state.
@@ -266,13 +271,13 @@ class SimulatedAgent:
             personal_essence (int): The agent's vitality.
 
         Returns:
-            str: The agent's text response.
+            Any: The agent's response (AIMessage).
         """
         initial_state = {
             "current_time": current_time,
             "history_context": "",
             "semantic_context": [],
-            "response": "",
+            "response": None,
             "global_essence": global_essence,
             "personal_essence": personal_essence
         }

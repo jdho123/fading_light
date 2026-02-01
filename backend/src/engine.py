@@ -83,29 +83,31 @@ class SimulationEngine:
             if agent.name != sender_name:
                 agent.listen(sender_name, message, self.current_time)
 
-    def _process_take_action(self, agent: SimulatedAgent, response: str) -> bool:
+    def _process_take_action(self, agent: SimulatedAgent, response_message) -> bool:
         """
-        Parses the response for [TAKE: X] and updates resources.
+        Inspects the response for tool calls to `take_essence`.
         Returns True if an action was taken, False otherwise.
         """
-        match = re.search(r"\[TAKE:\s*(\d+)\]", response, re.IGNORECASE)
-        if match:
-            amount = int(match.group(1))
-            
-            # 1. Validate Available Global Resource
-            actual_taken = min(amount, self.global_resource)
-            
-            # 2. Update Global Pool
-            self.global_resource -= actual_taken
-            
-            # 3. Update Agent Pool
-            # (Optional: Cap at max, but for now let's just add it)
-            current_res = self.agent_resources[agent.agent_id]
-            self.agent_resources[agent.agent_id] = current_res + actual_taken
-            
-            # 4. Broadcast the Event
-            self.broadcast("SYSTEM", f"{agent.name} took {actual_taken} Essence. (Global Remaining: {self.global_resource})")
-            return True
+        # Check if there are tool calls
+        if hasattr(response_message, 'tool_calls') and response_message.tool_calls:
+            for tool_call in response_message.tool_calls:
+                if tool_call['name'] == 'take_essence':
+                    args = tool_call['args']
+                    amount = args.get('amount', 0)
+                    
+                    # 1. Validate Available Global Resource
+                    actual_taken = min(amount, self.global_resource)
+                    
+                    # 2. Update Global Pool
+                    self.global_resource -= actual_taken
+                    
+                    # 3. Update Agent Pool
+                    current_res = self.agent_resources[agent.agent_id]
+                    self.agent_resources[agent.agent_id] = current_res + actual_taken
+                    
+                    # 4. Broadcast the Event
+                    self.broadcast("SYSTEM", f"{agent.name} took {actual_taken} Essence. (Global Remaining: {self.global_resource})")
+                    return True
             
         return False
 
@@ -165,20 +167,22 @@ class SimulationEngine:
                     turns += 1
                     
                     # Agent decides
-                    response = agent.respond(
+                    response_msg = agent.respond(
                         current_time=self.current_time,
                         global_essence=self.global_resource,
                         personal_essence=self.agent_resources[agent.agent_id]
                     )
                     
-                    # Broadcast speech
-                    # (We strip the [TAKE] tag for cleaner reading, or keep it? Let's keep it for transparency)
-                    self.broadcast(agent.name, response)
-                    
-                    # Check for Action Lock
-                    if self._process_take_action(agent, response):
+                    # Check for Action Lock first
+                    # If they acted, we do NOT broadcast their text (strict separation)
+                    if self._process_take_action(agent, response_msg):
                         agents_done.add(agent.agent_id)
-                        
+                    else:
+                        # If no action, broadcast the dialogue
+                        content = response_msg.content
+                        if content:
+                            self.broadcast(agent.name, content)
+                    
                     time.sleep(1)
             
             # Force end of round if limit reached
